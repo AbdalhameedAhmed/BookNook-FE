@@ -1,7 +1,8 @@
 import type { Listing, ListingPayload, BookRequest, Transaction } from './types';
 
 async function apiRequest<T>(path: string, token?: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, {
+  const API_BASE_URL = import.meta.env.VITE_API_URL
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       ...(init.body ? { 'Content-Type': 'application/json' } : {}),
