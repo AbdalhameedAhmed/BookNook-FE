@@ -148,8 +148,10 @@ export function MyBooksPage() {
     setSaving(true);
     setError('');
     try {
-      if (editing) await api.updateListing(session.access_token, editing.id, payload);
-      else await api.createListing(session.access_token, payload);
+      const photo = payload.images?.[0];
+      const listingPayload = { ...payload, images: photo ? [photo] : editing?.images ?? [] };
+      if (editing) await api.updateListing(session.access_token, editing.id, listingPayload);
+      else await api.createListing(session.access_token, listingPayload);
       setNotice(editing ? t('listingChangesSaved') : t('bookOnShelf'));
       setEditing(null);
       await refresh();
@@ -174,7 +176,13 @@ export function MyBooksPage() {
         </section>
         <section className="listing-editor" id="listing-editor">
           <div className="editor-heading"><span className="editor-index">{editing ? '02' : '01'}</span><div><p className="eyebrow eyebrow-ink">{editing ? t('editListing') : t('passBookAlong')}</p><h2>{editing ? t('makeItYours') : t('listFormTitle')}</h2></div></div>
-          <ListingForm key={editing?.id ?? 'new'} initial={editing} onSave={handleSave} saving={saving} />
+          <ListingForm
+            key={editing?.id ?? 'new'}
+            initial={editing}
+            onSave={handleSave}
+            onUpload={(file) => api.uploadListingImage(session!.access_token, file)}
+            saving={saving}
+          />
         </section>
       </div>
     </>
@@ -248,7 +256,12 @@ export function TransactionsPage() {
   );
 }
 
-function ListingForm({ initial, onSave, saving }: { initial: Listing | null; onSave: (payload: ListingPayload) => Promise<void>; saving: boolean }) {
+function ListingForm({ initial, onSave, onUpload, saving }: {
+  initial: Listing | null;
+  onSave: (payload: ListingPayload) => Promise<void>;
+  onUpload: (file: File) => Promise<{ url: string }>;
+  saving: boolean;
+}) {
   const { t } = useLanguage();
   const [title, setTitle] = useState(initial?.title ?? '');
   const [author, setAuthor] = useState(initial?.author ?? '');
@@ -258,14 +271,46 @@ function ListingForm({ initial, onSave, saving }: { initial: Listing | null; onS
   const [price, setPrice] = useState(initial?.price_egp == null ? '' : String(initial.price_egp));
   const [area, setArea] = useState(initial?.area ?? 'Fayoum Center');
   const [meetup, setMeetup] = useState(initial?.meetup_preference ?? 'direct_meetup');
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState('');
+  const [photoPreview, setPhotoPreview] = useState('');
 
-  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (!photo) {
+      setPhotoPreview(initial?.images?.[0] ?? '');
+      return;
+    }
+    const previewUrl = URL.createObjectURL(photo);
+    setPhotoPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [initial?.images, photo]);
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void onSave({
+    setPhotoError('');
+    let uploadedImage: string | undefined;
+    if (photo) {
+      if (photo.size > 2 * 1024 * 1024) {
+        setPhotoError(t('imageTooLarge'));
+        return;
+      }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type)) {
+        setPhotoError(t('invalidImageType'));
+        return;
+      }
+    }
+
+    const payload: ListingPayload = {
       title: title.trim(), author: author.trim() || null, description: description.trim() || null,
       condition, listing_type: listingType, price_egp: listingType === 'sale' ? Number(price) : null,
       area: area.trim(), meetup_preference: meetup,
-    });
+    };
+    try {
+      if (photo) uploadedImage = (await onUpload(photo)).url;
+      await onSave({ ...payload, images: uploadedImage ? [uploadedImage] : undefined });
+    } catch (reason) {
+      setPhotoError(reason instanceof Error ? reason.message : t('imageUploadFailed'));
+    }
   };
 
   return <form className="listing-form" onSubmit={submit}>
@@ -273,6 +318,26 @@ function ListingForm({ initial, onSave, saving }: { initial: Listing | null; onS
     <label>{t('author')} <span className="optional-label">{t('optional')}</span><input value={author} onChange={(event) => setAuthor(event.target.value)} maxLength={120} /></label>
     <div className="editor-two-col"><label>{t('condition')}<select value={condition} onChange={(event) => setCondition(event.target.value)}><option value="like_new">{t('likeNew')}</option><option value="good">{t('good')}</option><option value="acceptable">{t('acceptable')}</option><option value="heavily_used">{t('heavilyUsed')}</option></select></label><label>{t('offer')}<select value={listingType} onChange={(event) => setListingType(event.target.value as Listing['listing_type'])}><option value="sale">{t('forSale')}</option><option value="exchange">{t('exchange')}</option><option value="free">{t('free')}</option></select></label></div>
     {listingType === 'sale' ? <label>{t('priceEgp')}<input type="number" value={price} onChange={(event) => setPrice(event.target.value)} min="0" step="1" required /></label> : null}
+    <label>{t('bookPhoto')} <span className="optional-label">{t('optional')}</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => {
+      const nextPhoto = event.target.files?.[0] ?? null;
+      setPhotoError('');
+      if (nextPhoto && nextPhoto.size > 2 * 1024 * 1024) {
+        setPhoto(null);
+        setPhotoError(t('imageTooLarge'));
+        event.target.value = '';
+        return;
+      }
+      if (nextPhoto && !['image/jpeg', 'image/png', 'image/webp'].includes(nextPhoto.type)) {
+        setPhoto(null);
+        setPhotoError(t('invalidImageType'));
+        event.target.value = '';
+        return;
+      }
+      setPhoto(nextPhoto);
+    }} /></label>
+    <p className="form-safety">{t('imageUploadLimit')}</p>
+    {photoPreview ? <img className="listing-photo-preview" src={photoPreview} alt={t('coverAlt')} /> : null}
+    {photoError ? <p className="inline-alert" role="alert">{photoError}</p> : null}
     <label>{t('approximateArea')}<input value={area} onChange={(event) => setArea(event.target.value)} minLength={2} maxLength={100} required /></label>
     <label>{t('meetupPreference')}<select value={meetup} onChange={(event) => setMeetup(event.target.value)}><option value="direct_meetup">{t('directMeetup')}</option><option value="pickup_point">{t('pickupPoint')}</option><option value="either">{t('either')}</option></select></label>
     <label>{t('aboutCopy')} <span className="optional-label">{t('optional')}</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={1500} rows={4} placeholder={t('copyPlaceholder')} /></label>

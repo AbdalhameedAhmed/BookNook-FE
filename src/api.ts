@@ -5,7 +5,7 @@ async function apiRequest<T>(path: string, token?: string, init: RequestInit = {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
@@ -33,6 +33,11 @@ export const api = {
   },
   listing: (id: string) => apiRequest<Listing>(`/api/v1/listings/${id}`),
   myListings: async (token: string) => (await apiRequest<{ items: Listing[] }>('/api/v1/me/listings', token)).items,
+  uploadListingImage: (token: string, file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    return apiRequest<{ url: string }>('/api/v1/listing-images', token, { method: 'POST', body });
+  },
   createListing: (token: string, payload: ListingPayload) => apiRequest<Listing>('/api/v1/listings', token, {
     method: 'POST', body: JSON.stringify(payload),
   }),

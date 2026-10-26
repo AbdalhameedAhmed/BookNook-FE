@@ -260,6 +260,7 @@ button { color: inherit; }
 .listing-form input, .listing-form select, .listing-form textarea { width: 100%; min-height: 39px; padding: 8px 10px; border: 1px solid #d5d3c9; border-radius: 0; outline: 0; background: var(--white); color: var(--ink); font-size: 10px; font-weight: 400; }
 .listing-form input:focus, .listing-form select:focus, .listing-form textarea:focus { border-color: var(--forest); }
 .listing-form textarea { resize: vertical; }
+.listing-photo-preview { width: 100%; max-height: 260px; object-fit: contain; background: var(--paper-dark); }
 .editor-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .optional-label { color: #8b8b80; font-size: 8px; font-weight: 400; }
 .form-safety { margin: -1px 0 0; color: #777b70; font-size: 8px; line-height: 1.6; }

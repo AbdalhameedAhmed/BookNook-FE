@@ -46,4 +46,5 @@ export type ListingPayload = {
   price_egp: number | null;
   area: string;
   meetup_preference: string;
+  images?: string[];
 };
