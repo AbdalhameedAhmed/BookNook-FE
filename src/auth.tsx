@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { Navigate, useLocation } from 'react-router-dom';
 import { supabase } from './supabase';
+import { useLanguage } from './i18n';
 
 type AuthContextValue = {
   session: Session | null;
@@ -50,13 +51,14 @@ export function useAuth() {
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, isLoading } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
 
   if (isLoading) {
     return (
       <main className="route-loading" aria-live="polite">
         <span className="loading-mark" aria-hidden="true" />
-        <span>Restoring your session</span>
+        <span>{t('loadingSession')}</span>
       </main>
     );
   }

@@ -56,9 +56,9 @@ function PublicLayout() {
             <Languages size={15} /><span>{t('language')}</span>
           </button>
           {session ? (
-            <Link className="header-account" to="/account"><UserRound size={16} /><span>{t('mySpace')}</span><ArrowRight size={15} /></Link>
+            <Link className="header-account" to="/account"><UserRound size={16} /><span>{t('mySpace')}</span><ArrowRight className="flip-rtl" size={15} /></Link>
           ) : (
-            <Link className="header-signin" to="/signin">{t('signIn')} <ArrowRight size={16} /></Link>
+            <Link className="header-signin" to="/signin">{t('signIn')} <ArrowRight className="flip-rtl" size={16} /></Link>
           )}
           <button className="menu-toggle" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? t('closeMenu') : t('openMenu')}>
             {menuOpen ? <X size={21} /> : <Menu size={21} />}
@@ -77,5 +77,5 @@ function PublicLayout() {
 
 function NotFound() {
   const { language } = useLanguage();
-  return <main className="detail-missing"><span>404 / {language === 'ar' ? 'صفحة غير موجودة' : 'WRONG TURN'}</span><h1>{language === 'ar' ? 'هذه الصفحة ليست على الرفّ.' : 'That page isn’t on this shelf.'}</h1><Link to="/">{language === 'ar' ? 'العودة إلى بوك نوك' : 'Back to BookNook'} <ArrowRight size={16} /></Link></main>;
+  return <main className="detail-missing"><span>404 / {language === 'ar' ? 'صفحة غير موجودة' : 'WRONG TURN'}</span><h1>{language === 'ar' ? 'هذه الصفحة ليست على الرفّ.' : 'That page isn’t on this shelf.'}</h1><Link to="/">{language === 'ar' ? 'العودة إلى بوك نوك' : 'Back to BookNook'} <ArrowRight className="flip-rtl" size={16} /></Link></main>;
 }

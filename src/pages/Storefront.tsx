@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
-import { ArrowDownRight, ArrowRight, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { ArrowDown, ArrowRight, MapPin, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import type { Listing, ListingType } from '../types';
 import { formatCondition, useLanguage } from '../i18n';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card, CardContent } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Alert } from '../components/ui/alert';
+import { describeError } from '../errors';
 
 const coverFallbacks = [
   'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=760&q=85',
@@ -23,25 +29,29 @@ export default function Storefront() {
   const [filter, setFilter] = useState<'all' | ListingType>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    api.listings(query.trim())
-      .then((result) => {
-        if (active) {
-          setListings(result.items);
-          setError('');
-        }
-      })
-      .catch(() => {
-        if (active) setError(t('loadShelfError'));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => { active = false; };
-  }, [query, t]);
+    // Debounce typing so every keystroke doesn't hit the API.
+    const timer = window.setTimeout(() => {
+      api.listings(query.trim())
+        .then((result) => {
+          if (active) {
+            setListings(result.items);
+            setError('');
+          }
+        })
+        .catch((reason) => {
+          if (active) setError(describeError(reason, t, 'loadShelfError'));
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }, query ? 300 : 0);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [query, reloadKey, t]);
 
   const visibleListings = listings.filter((listing) => filter === 'all' || listing.listing_type === filter);
   const featured = visibleListings[0];
@@ -53,58 +63,61 @@ export default function Storefront() {
   ];
 
   return (
-    <>
-      <section className="market-hero">
-        <div className="market-hero-image" aria-hidden="true" />
-        <div className="market-hero-content">
-          <p className="eyebrow"><span className="eyebrow-dot" /> {t('heroEyebrow')}</p>
-          <h1>{t('heroTitleOne')}<br /><em>{t('heroTitleTwo')}</em></h1>
-          <p className="hero-description">{t('heroCopy')}</p>
-          <a className="hero-link" href="#the-shelf">{t('exploreShelf')} <ArrowDownRight size={17} /></a>
+    <main className="storefront">
+      <section className="storefront-hero">
+        <div className="storefront-hero-copy">
+          <Badge variant="outline" className="storefront-location"><MapPin size={13} /> {t('heroEyebrow')}</Badge>
+          <h1>{t('heroTitleOne')} <em>{t('heroTitleTwo')}</em></h1>
+          <p>{t('heroCopy')}</p>
+          <Button className="storefront-hero-cta" onClick={() => document.getElementById('the-shelf')?.scrollIntoView({ behavior: 'smooth' })}>
+            {t('exploreShelf')} <ArrowDown size={16} />
+          </Button>
         </div>
-        <div className="hero-note"><span>{t('heroIndex')}</span><span>{t('heroMotto')}</span></div>
+        <div className="storefront-hero-image" role="img" aria-label={t('heroEyebrow')}>
+          <span>{t('heroMotto')}</span>
+        </div>
       </section>
 
-      <section className="shelf-section" id="the-shelf">
+      <section className="shelf-section shelf-section-v2" id="the-shelf">
         <div className="section-heading">
           <div>
             <p className="eyebrow eyebrow-ink"><Sparkles size={14} /> {t('shelfEyebrow')}</p>
-            <h2>{t('shelfTitleOne')}<br className="desktop-break" /> {t('shelfTitleTwo')}</h2>
+            <h2>{t('shelfTitleOne')} {t('shelfTitleTwo')}</h2>
           </div>
           <p className="section-aside">{t('shelfCopy')}</p>
         </div>
 
-        <div className="shelf-controls">
-          <label className="search-field">
-            <Search size={19} aria-hidden="true" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('searchBooks')} aria-label={t('searchBooks')} />
-            <kbd>/</kbd>
+        <div className="shelf-controls shelf-controls-v2">
+          <label className="storefront-search">
+            <Search size={18} aria-hidden="true" />
+            <Input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('searchBooks')} aria-label={t('searchBooks')} />
           </label>
-          <div className="filter-row" aria-label={t('filterBooks')}>
+          <div className="filter-row filter-row-v2" role="group" aria-label={t('filterBooks')}>
             <SlidersHorizontal size={16} aria-hidden="true" />
             {filters.map((item) => (
-              <button key={item.value} type="button" className={filter === item.value ? 'filter-tab is-active' : 'filter-tab'} onClick={() => setFilter(item.value)}>
+              <Button key={item.value} variant={filter === item.value ? 'default' : 'outline'} size="sm" aria-pressed={filter === item.value} className="filter-control" onClick={() => setFilter(item.value)}>
                 {item.label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
 
-        {error ? <div className="inline-alert" role="alert">{error}</div> : null}
+        {error ? <Alert className="page-alert" title={t('somethingWrong')} onRetry={() => setReloadKey((key) => key + 1)} retryLabel={t('tryAgain')}>{error}</Alert> : null}
         {loading ? (
-            <div className="book-grid" aria-label={t('loadingBooks')}>
-            {Array.from({ length: 3 }).map((_, index) => <div className="book-skeleton" key={index} />)}
+          <div className="book-grid book-grid-v2" aria-busy="true" aria-label={t('loadingBooks')}>
+            {Array.from({ length: 8 }).map((_, index) => <div className="store-skeleton" key={index} />)}
           </div>
-        ) : visibleListings.length === 0 ? (
-          <div className="shelf-empty">
-            <span className="empty-symbol">∅</span>
-            <h3>{query ? t('noMatches') : t('shelfWaiting')}</h3>
-            <p>{query ? t('tryDifferentSearch') : t('firstBook')}</p>
+        ) : error && listings.length === 0 ? null : visibleListings.length === 0 ? (
+          <div className="shelf-empty shelf-empty-v2">
+            <span className="empty-symbol"><Search size={24} /></span>
+            <h3>{query || filter !== 'all' ? t('noMatches') : t('shelfWaiting')}</h3>
+            <p>{query || filter !== 'all' ? t('tryDifferentSearch') : t('firstBook')}</p>
+            {query || filter !== 'all' ? <Button variant="outline" size="sm" className="empty-action" onClick={() => { setQuery(''); setFilter('all'); }}>{t('everything')}</Button> : null}
           </div>
         ) : (
-          <div className="book-grid">
+          <div className="book-grid book-grid-v2">
             {visibleListings.map((listing, index) => (
-              <BookTile key={listing.id} listing={listing} image={coverFor(listing, index)} index={index} />
+              <BookTile key={listing.id} listing={listing} image={coverFor(listing, index)} />
             ))}
           </div>
         )}
@@ -112,7 +125,7 @@ export default function Storefront() {
         {featured ? (
           <Link to={`/books/${featured.id}`} className="browse-more">
             <span><strong>{t('lookingSpecific')}</strong><small>{t('openListingHint')}</small></span>
-            <span className="circle-arrow"><ArrowRight size={19} /></span>
+            <span className="circle-arrow"><ArrowRight className="flip-rtl" size={19} /></span>
           </Link>
         ) : null}
       </section>
@@ -130,24 +143,28 @@ export default function Storefront() {
           <article><span>03</span><h3>{t('stepKeep')}</h3><p>{t('stepKeepCopy')}</p></article>
         </div>
       </section>
-    </>
+    </main>
   );
 }
 
-function BookTile({ listing, image, index }: { listing: Listing; image: string; index: number }) {
+function BookTile({ listing, image }: { listing: Listing; image: string }) {
   const { t } = useLanguage();
   return (
-    <Link to={`/books/${listing.id}`} className={`book-tile tile-${index % 3}`}>
-      <div className="book-art">
-        <img src={image} alt="" loading="lazy" />
-        <span className={`book-type type-${listing.listing_type}`}>{listing.listing_type === 'sale' ? t('forSale') : listing.listing_type === 'exchange' ? t('exchange') : t('free')}</span>
-        <span className="book-art-arrow"><ArrowRight size={17} /></span>
-      </div>
-      <div className="book-tile-info">
-        <div><h3>{listing.title}</h3><p>{listing.author || t('authorNotListed')}</p></div>
-        <strong>{listing.price_egp != null ? `${listing.price_egp} ${t('currencyCode')}` : listing.listing_type === 'free' ? t('free') : t('swap')}</strong>
-      </div>
-      <div className="book-tile-meta"><span>{listing.area}</span><span>{formatCondition(listing.condition, t)}</span></div>
-    </Link>
+    <Card className="book-card">
+      <Link to={`/books/${listing.id}`} className="book-card-link">
+        <div className="book-card-image">
+          <img src={image} alt={listing.title} loading="lazy" />
+          <Badge variant={listing.listing_type} className="book-card-badge">{listing.listing_type === 'sale' ? t('forSale') : listing.listing_type === 'exchange' ? t('exchange') : t('free')}</Badge>
+          <span className="book-card-arrow" aria-hidden="true"><ArrowRight className="flip-rtl" size={17} /></span>
+        </div>
+        <CardContent className="book-card-content">
+          <div className="book-card-title-row">
+            <div className="book-card-title-copy"><h3>{listing.title}</h3><p>{listing.author || t('authorNotListed')}</p></div>
+            <strong>{listing.price_egp != null ? `${listing.price_egp} ${t('currencyCode')}` : listing.listing_type === 'free' ? t('free') : t('swap')}</strong>
+          </div>
+          <div className="book-card-meta"><span><MapPin size={13} />{listing.area}</span><span>{formatCondition(listing.condition, t)}</span></div>
+        </CardContent>
+      </Link>
+    </Card>
   );
 }

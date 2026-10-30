@@ -1,25 +1,26 @@
 import type { Listing, ListingPayload, BookRequest, Transaction } from './types';
+import { ApiError, NetworkError, readDetail } from './errors';
 
 async function apiRequest<T>(path: string, token?: string, init: RequestInit = {}): Promise<T> {
   const API_BASE_URL = import.meta.env.VITE_API_URL
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+    });
+  } catch {
+    throw new NetworkError();
+  }
 
   if (!response.ok) {
-    let message = `Request failed (${response.status})`;
-    try {
-      const payload = await response.json();
-      message = payload.detail ?? payload.message ?? message;
-    } catch {
-      message = response.statusText || message;
-    }
-    throw new Error(message);
+    let detail: string | null = null;
+    try { detail = readDetail(await response.json()); } catch { /* Non-JSON error body. */ }
+    throw new ApiError(detail ?? `Request failed (${response.status})`, response.status, detail);
   }
 
   if (response.status === 204) return undefined as T;
@@ -60,7 +61,7 @@ export const api = {
     return { requests: requestResponse.items, transactions: transactionResponse.items };
   },
   completeTransaction: (token: string, id: string) => apiRequest(`/api/v1/transactions/${id}/complete`, token, { method: 'POST' }),
-  reportListing: (token: string, id: string) => apiRequest('/api/v1/reports', token, {
-    method: 'POST', body: JSON.stringify({ listing_id: id, reason: 'inappropriate' }),
+  reportListing: (token: string, id: string, reason: string, details: string | null) => apiRequest('/api/v1/reports', token, {
+    method: 'POST', body: JSON.stringify({ listing_id: id, reason, details }),
   }),
 };
