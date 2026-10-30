@@ -2,14 +2,14 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import type { HTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 
-const badgeVariants = cva('inline-flex items-center rounded-sm px-2.5 py-1 text-xs font-semibold', {
+const badgeVariants = cva('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-none ring-1 ring-inset', {
   variants: {
     variant: {
-      default: 'bg-primary text-primary-foreground',
-      sale: 'bg-destructive text-destructive-foreground',
-      exchange: 'bg-primary text-primary-foreground',
-      free: 'bg-accent text-accent-foreground',
-      outline: 'border border-input text-foreground',
+      default: 'bg-primary-soft text-primary ring-[var(--primary-200)]',
+      sale: 'bg-[var(--info-50)] text-[var(--info-700)] ring-[var(--info-200)]',
+      exchange: 'bg-[var(--violet-50)] text-[var(--violet-700)] ring-[var(--violet-200)]',
+      free: 'bg-[var(--warning-50)] text-[var(--warning-700)] ring-[var(--warning-200)]',
+      outline: 'bg-card text-foreground ring-[var(--border-strong)]',
     },
   },
   defaultVariants: { variant: 'default' },

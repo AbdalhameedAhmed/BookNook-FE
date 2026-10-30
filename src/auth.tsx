@@ -56,10 +56,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <main className="route-loading" aria-live="polite">
+      <div className="route-loading" aria-live="polite">
         <span className="loading-mark" aria-hidden="true" />
         <span>{t('loadingSession')}</span>
-      </main>
+      </div>
     );
   }
 

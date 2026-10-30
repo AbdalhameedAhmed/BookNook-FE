@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, BookOpen, Check, CircleDollarSign, Clock3, Languages, LogOut, Plus, RefreshCw, ArrowUpRight, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, BookOpen, CheckCircle2, Clock3, Handshake, Inbox, LayoutDashboard, LogOut, Plus, X } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
@@ -8,9 +8,11 @@ import { supabase } from '../supabase';
 import { formatCondition, formatMeetup, formatStatus, useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { describeError } from '../errors';
+import { listingImage, priceLabel } from '../lib/listing';
 import { Alert, FieldError } from '../components/ui/alert';
-import { Button } from '../components/ui/button';
+import { Button, buttonVariants } from '../components/ui/button';
 import { useConfirm } from '../components/ui/dialog';
+import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 
 const maxImageBytes = 2 * 1024 * 1024;
@@ -18,15 +20,16 @@ const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
 export function AccountLayout() {
   const { session } = useAuth();
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
   const confirm = useConfirm();
   const toast = useToast();
   const navigate = useNavigate();
+  const displayName = session?.user.user_metadata?.display_name || session?.user.email?.split('@')[0] || 'Reader';
   const navItems = [
-    { to: '/account', label: t('overview'), icon: RefreshCw, end: true },
+    { to: '/account', label: t('overview'), icon: LayoutDashboard, end: true },
     { to: '/account/books', label: t('myBooks'), icon: BookOpen },
-    { to: '/account/requests', label: t('requests'), icon: Clock3 },
-    { to: '/account/transactions', label: t('transactions'), icon: CircleDollarSign },
+    { to: '/account/requests', label: t('requests'), icon: Inbox },
+    { to: '/account/transactions', label: t('transactions'), icon: Handshake },
   ];
 
   const signOut = async () => {
@@ -42,22 +45,29 @@ export function AccountLayout() {
   };
 
   return (
-    <main className="account-page">
-      <Link to="/" className="back-link"><ArrowLeft size={16} className="flip-rtl" /> {t('backHome')}</Link>
-      <header className="account-heading">
-        <div><p className="eyebrow eyebrow-ink">{t('accountEyebrow')}</p><h1>{t('accountTitleOne')}<br />{t('accountTitleTwo')}</h1></div>
-        <div className="account-user"><span className="user-avatar">{session?.user.email?.slice(0, 1).toUpperCase() || 'R'}</span><span><strong>{session?.user.user_metadata?.display_name || 'Reader'}</strong><small>{session?.user.email}</small></span><button className="language-toggle" onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')} aria-label={language === 'en' ? t('switchToArabic') : t('switchToEnglish')}><Languages size={15} /><span>{t('language')}</span></button><button className="icon-quiet" onClick={() => void signOut()} aria-label={t('signOut')} title={t('signOut')}><LogOut size={17} className="flip-rtl" /></button></div>
+    <div className="container page">
+      <header className="account-header">
+        <div className="account-identity">
+          <span className="avatar avatar-lg" aria-hidden="true">{displayName.slice(0, 1).toUpperCase()}</span>
+          <div>
+            <h1 className="page-title">{t('welcomeName')} {displayName}</h1>
+            <p className="page-subtitle">{t('accountSubtitle')}</p>
+          </div>
+        </div>
+        <div className="account-header-actions">
+          <Link className={buttonVariants()} to="/account/books?new=1"><Plus size={16} />{t('listBook')}</Link>
+          <Button variant="outline" onClick={() => void signOut()}><LogOut size={16} className="flip-rtl" />{t('signOut')}</Button>
+        </div>
       </header>
-      <nav className="account-tabs" aria-label={t('accountSections')}>
+      <nav className="tabs" aria-label={t('accountSections')}>
         {navItems.map(({ to, label, icon: Icon, end }) => (
-          <NavLink key={to} to={to} end={end} className={({ isActive }) => isActive ? 'account-tab is-active' : 'account-tab'}>
-            <Icon size={17} /> <span>{label}</span>
+          <NavLink key={to} to={to} end={end} className={({ isActive }) => isActive ? 'tab is-active' : 'tab'}>
+            <Icon size={16} aria-hidden="true" /><span>{label}</span>
           </NavLink>
         ))}
-        <NavLink to="/account/books?new=1" className="account-tab account-tab-cta"><Plus size={17} /><span>{t('listBook')}</span></NavLink>
       </nav>
       <div className="account-body"><Outlet /></div>
-    </main>
+    </div>
   );
 }
 
@@ -90,29 +100,43 @@ export function AccountOverview() {
 
   useEffect(() => load(), [load]);
 
-  const activeCount = listings.filter((listing) => listing.status === 'active').length;
-  const pendingCount = requests.filter((request) => request.status === 'pending').length;
+  const count = (value: number) => (loading ? '—' : String(value));
 
   return (
     <>
-      <div className="account-welcome"><span>{t('overviewShelf')} / {new Date().getFullYear()}</span><p>{t('accountWelcome')}</p><NavLink to="/account/books?new=1">{t('addBook')} <ArrowUpRight size={16} className="flip-rtl" /></NavLink></div>
       {error ? <Alert className="page-alert" title={t('listingError')} onRetry={load} retryLabel={t('tryAgain')}>{error}</Alert> : null}
-      <section className="stat-grid" aria-label="Account summary">
-        <Stat label={t('activeBooks')} value={loading ? '—' : String(activeCount).padStart(2, '0')} note={t('activeBooksNote')} icon={<BookOpen />} />
-        <Stat label={t('waitingForYou')} value={loading ? '—' : String(pendingCount).padStart(2, '0')} note={t('pendingRequests')} icon={<Clock3 />} accent />
-        <Stat label={t('inProgress')} value={loading ? '—' : String(transactions.filter((item) => item.status === 'arranging').length).padStart(2, '0')} note={t('meetupsArranged')} icon={<CircleDollarSign />} />
+      <section className="stats" aria-label={t('overview')}>
+        <StatCard tone="primary" icon={<BookOpen size={20} />} label={t('activeBooks')} value={count(listings.filter((listing) => listing.status === 'active').length)} note={t('activeBooksNote')} />
+        <StatCard tone="warning" icon={<Clock3 size={20} />} label={t('waitingForYou')} value={count(requests.filter((request) => request.status === 'pending').length)} note={t('pendingRequests')} />
+        <StatCard tone="info" icon={<Handshake size={20} />} label={t('inProgress')} value={count(transactions.filter((item) => item.status === 'arranging').length)} note={t('meetupsArranged')} />
       </section>
-      <div className="account-columns">
-        <section className="account-section">
-          <div className="account-section-head"><div><p className="eyebrow eyebrow-ink">{t('recentlyListed')}</p><h2>{t('yourBooks')}</h2></div><NavLink to="/account/books">{t('viewAll')} <ArrowUpRight size={15} className="flip-rtl" /></NavLink></div>
-          {loading ? <RowSkeletons label={t('loadingShelf')} /> : listings.length === 0 ? <EmptyState title={t('yourShelfStarts')} copy={t('listReadyBook')} /> : (
-            <div className="compact-list">{listings.slice(0, 4).map((listing) => <ListingLine listing={listing} key={listing.id} />)}</div>
+      <div className="overview-grid">
+        <section className="panel">
+          <PanelHead title={t('yourBooks')} subtitle={t('recentlyListed')} action={<Link className="text-link" to="/account/books">{t('viewAll')} <ArrowRight size={14} className="flip-rtl" /></Link>} />
+          {loading ? <RowSkeletons label={t('loadingShelf')} /> : listings.length === 0 ? (
+            <EmptyState size="compact" icon={<BookOpen size={22} />} title={t('yourShelfStarts')} description={t('listReadyBook')} action={<Link className={buttonVariants({ size: 'sm' })} to="/account/books?new=1"><Plus size={16} />{t('addBook')}</Link>} />
+          ) : (
+            <ul className="row-list">{listings.slice(0, 4).map((listing) => (
+              <li className="row" key={listing.id}>
+                <BookThumb listing={listing} />
+                <div className="row-main"><p className="row-title">{listing.title}</p><p className="row-meta">{listing.area} · {formatCondition(listing.condition, t)}</p></div>
+                <div className="row-end"><span className="row-price">{priceLabel(listing, t)}</span><StatusPill status={listing.status} /></div>
+              </li>
+            ))}</ul>
           )}
         </section>
-        <section className="account-section waiting-section">
-          <div className="account-section-head"><div><p className="eyebrow eyebrow-ink">{t('littleActivity')}</p><h2>{t('requests')}</h2></div><NavLink to="/account/requests">{t('viewAll')} <ArrowUpRight size={15} className="flip-rtl" /></NavLink></div>
-          {loading ? <RowSkeletons label={t('loadingRequests')} /> : requests.length === 0 ? <EmptyState title={t('quietNow')} copy={t('newRequestsAppear')} /> : (
-            <div className="compact-list">{requests.slice(0, 4).map((request) => <RequestLine request={request} key={request.id} />)}</div>
+        <section className="panel">
+          <PanelHead title={t('requests')} subtitle={t('littleActivity')} action={<Link className="text-link" to="/account/requests">{t('viewAll')} <ArrowRight size={14} className="flip-rtl" /></Link>} />
+          {loading ? <RowSkeletons label={t('loadingRequests')} /> : requests.length === 0 ? (
+            <EmptyState size="compact" icon={<Inbox size={22} />} title={t('quietNow')} description={t('newRequestsAppear')} />
+          ) : (
+            <ul className="row-list">{requests.slice(0, 4).map((request) => (
+              <li className="row" key={request.id}>
+                <span className="row-icon" aria-hidden="true">{request.seller_id === session?.user.id ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}</span>
+                <div className="row-main"><p className="row-title">{request.listing_title || t('requestsTitle')}</p><p className="row-meta">{request.message || t('noMessage')}</p></div>
+                <StatusPill status={request.status} />
+              </li>
+            ))}</ul>
           )}
         </section>
       </div>
@@ -205,41 +229,47 @@ export function MyBooksPage() {
   };
 
   return (
-    <>
-      <div className="account-section-head page-section-head"><div><p className="eyebrow eyebrow-ink">{t('booksShared')}</p><h2>{t('listMyBooks')}</h2></div><Button className="accent-button" onClick={() => { setEditing(null); scrollToEditor(); }}><Plus size={17} /> {t('listBookButton')}</Button></div>
-      <div className="books-manage-layout">
-        <section className="managed-books" aria-busy={loading}>
-          {loadError ? <Alert className="page-alert" title={t('couldNotLoadBooks')} onRetry={() => void refresh()} retryLabel={t('tryAgain')}>{loadError}</Alert> : null}
-          {loading ? <RowSkeletons label={t('loadingShelf')} tall /> : listings.length === 0 && !loadError ? <EmptyState title={t('shelfEmpty')} copy={t('addBookFindReader')} /> : listings.map((listing) => (
-            <article className={editing?.id === listing.id ? 'managed-book is-editing' : 'managed-book'} key={listing.id}>
-              <div className={`managed-cover cover-${listing.listing_type}`}><BookOpen size={25} /></div>
-              <div className="managed-book-copy"><span className={`status-dot status-${listing.status}`} />{formatStatus(listing.status, t)}<h3>{listing.title}</h3><p>{listing.author || t('authorNotListed')} · {listing.area} · {formatCondition(listing.condition, t)}</p><strong>{listing.price_egp != null ? `${listing.price_egp} ${t('currencyCode')}` : listing.listing_type === 'free' ? t('free') : t('exchange')}</strong></div>
-              <div className="managed-actions">
-                <Button variant="outline" size="sm" onClick={() => startEditing(listing)} disabled={busyId === listing.id}>{t('edit')}</Button>
-                {listing.status === 'active' || listing.status === 'reserved' ? <>
-                  <Button variant="outline" size="sm" onClick={() => void handleComplete(listing)} loading={busyId === listing.id}>{completeLabel(listing, t)}</Button>
-                  <Button variant="destructive-outline" size="sm" onClick={() => void handleDeactivate(listing)} disabled={busyId === listing.id}>{t('deactivate')}</Button>
-                </> : null}
+    <div className="manage-grid">
+      <section className="panel" aria-busy={loading}>
+        <PanelHead title={t('listMyBooks')} subtitle={t('booksShared')} action={loading ? null : <span className="count-chip">{listings.length}</span>} />
+        {loadError ? <Alert className="page-alert" title={t('couldNotLoadBooks')} onRetry={() => void refresh()} retryLabel={t('tryAgain')}>{loadError}</Alert> : null}
+        {loading ? <RowSkeletons label={t('loadingShelf')} tall /> : listings.length === 0 && !loadError ? (
+          <EmptyState size="compact" icon={<BookOpen size={22} />} title={t('shelfEmpty')} description={t('addBookFindReader')} />
+        ) : (
+          <ul className="row-list">{listings.map((listing) => (
+            <li className={editing?.id === listing.id ? 'manage-row is-editing' : 'manage-row'} key={listing.id}>
+              <BookThumb listing={listing} large />
+              <div className="row-main">
+                <div className="row-title-line"><p className="row-title">{listing.title}</p><StatusPill status={listing.status} /></div>
+                <p className="row-meta">{listing.author || t('authorNotListed')} · {listing.area} · {formatCondition(listing.condition, t)}</p>
+                <p className="row-price">{priceLabel(listing, t)}</p>
+                <div className="row-actions">
+                  <Button variant="outline" size="sm" onClick={() => startEditing(listing)} disabled={busyId === listing.id}>{t('edit')}</Button>
+                  {listing.status === 'active' || listing.status === 'reserved' ? <>
+                    <Button variant="outline" size="sm" onClick={() => void handleComplete(listing)} loading={busyId === listing.id}>{completeLabel(listing, t)}</Button>
+                    <Button variant="destructive-outline" size="sm" onClick={() => void handleDeactivate(listing)} disabled={busyId === listing.id}>{t('deactivate')}</Button>
+                  </> : null}
+                </div>
               </div>
-            </article>
-          ))}
-        </section>
-        <section className="listing-editor" id="listing-editor">
-          <div className="editor-heading">
-            <span className="editor-index">{editing ? '02' : '01'}</span>
-            <div><p className="eyebrow eyebrow-ink">{editing ? t('editListing') : t('passBookAlong')}</p><h2>{editing ? t('makeItYours') : t('listFormTitle')}</h2></div>
-            {editing ? <button type="button" className="icon-quiet editor-cancel" onClick={() => setEditing(null)} aria-label={t('cancel')} title={t('cancel')}><X size={16} /></button> : null}
-          </div>
-          <ListingForm
-            key={editing?.id ?? 'new'}
-            initial={editing}
-            onSave={handleSave}
-            onUpload={(file) => api.uploadListingImage(session!.access_token, file)}
-            saving={saving}
-          />
-        </section>
-      </div>
-    </>
+            </li>
+          ))}</ul>
+        )}
+      </section>
+      <section className="panel editor-panel" id="listing-editor">
+        <PanelHead
+          title={editing ? t('editListing') : t('listBook')}
+          subtitle={editing ? editing.title : t('passBookAlong')}
+          action={editing ? <Button variant="ghost" size="icon" onClick={() => setEditing(null)} aria-label={t('cancel')} title={t('cancel')}><X size={18} /></Button> : null}
+        />
+        <ListingForm
+          key={editing?.id ?? 'new'}
+          initial={editing}
+          onSave={handleSave}
+          onUpload={(file) => api.uploadListingImage(session!.access_token, file)}
+          saving={saving}
+        />
+      </section>
+    </div>
   );
 }
 
@@ -287,26 +317,36 @@ export function RequestsPage() {
 
   return (
     <>
-      <div className="page-section-head"><p className="eyebrow eyebrow-ink">{t('readerToReader')}</p><h2>{t('requestsTitle')}</h2><p className="page-intro">{t('requestIntro')}</p></div>
+      <SectionIntro title={t('requestsTitle')} copy={t('requestIntro')} />
       {error ? <Alert className="page-alert" title={t('requestFailed')} onRetry={() => { setLoading(true); void reload(); }} retryLabel={t('tryAgain')}>{error}</Alert> : null}
-      {loading ? <CardSkeletons label={t('loadingRequests')} /> : requests.length === 0 && !error ? <EmptyState title={t('noRequests')} copy={t('noRequestsCopy')} /> : (
-        <div className="request-list">{requests.map((request) => {
+      {loading ? <CardSkeletons label={t('loadingRequests')} /> : requests.length === 0 && !error ? (
+        <EmptyState icon={<Inbox size={24} />} title={t('noRequests')} description={t('noRequestsCopy')} />
+      ) : (
+        <div className="card-grid">{requests.map((request) => {
           const incoming = request.seller_id === session?.user.id;
           const busy = busyId === request.id;
           return (
-            <article className="request-card" key={request.id}>
-              <div className="request-card-top"><span className={incoming ? 'request-direction incoming' : 'request-direction'}>{incoming ? t('forYourBook') : t('youSent')}</span><span className={`request-status status-${request.status}`}>{formatStatus(request.status, t)}</span></div>
-              <h3><Link to={`/books/${request.listing_id}`}>{request.listing_title || t('requestsTitle')}</Link></h3>
-              <p className="request-note">“{request.message || t('noMessage')}”</p>
-              <p className="request-id">{request.id.slice(0, 8)}</p>
-              {request.status === 'pending' ? (
-                <div className="request-actions">
-                  {incoming ? <>
-                    <Button size="sm" onClick={() => void update(request, 'accepted')} loading={busy}>{t('acceptRequest')}</Button>
-                    <Button size="sm" variant="destructive-outline" onClick={() => void update(request, 'rejected')} disabled={busy}>{t('decline')}</Button>
-                  </> : <Button size="sm" variant="outline" onClick={() => void update(request, 'cancelled')} loading={busy}>{t('cancelRequest')}</Button>}
-                </div>
-              ) : null}
+            <article className="panel request-card" key={request.id}>
+              <div className="request-card-head">
+                <span className={incoming ? 'direction-tag is-incoming' : 'direction-tag'}>
+                  {incoming ? <ArrowDownLeft size={14} aria-hidden="true" /> : <ArrowUpRight size={14} aria-hidden="true" />}
+                  {incoming ? t('forYourBook') : t('youSent')}
+                </span>
+                <StatusPill status={request.status} />
+              </div>
+              <h3 className="request-card-title"><Link to={`/books/${request.listing_id}`}>{request.listing_title || t('requestsTitle')}</Link></h3>
+              <blockquote className="request-message">{request.message || t('noMessage')}</blockquote>
+              <div className="request-card-foot">
+                <span className="mono-id">#{request.id.slice(0, 8)}</span>
+                {request.status === 'pending' ? (
+                  <div className="row-actions">
+                    {incoming ? <>
+                      <Button size="sm" variant="destructive-outline" onClick={() => void update(request, 'rejected')} disabled={busy}>{t('decline')}</Button>
+                      <Button size="sm" onClick={() => void update(request, 'accepted')} loading={busy}>{t('acceptRequest')}</Button>
+                    </> : <Button size="sm" variant="outline" onClick={() => void update(request, 'cancelled')} loading={busy}>{t('cancelRequest')}</Button>}
+                  </div>
+                ) : null}
+              </div>
             </article>
           );
         })}</div>
@@ -352,18 +392,28 @@ export function TransactionsPage() {
 
   return (
     <>
-      <div className="page-section-head"><p className="eyebrow eyebrow-ink">{t('handoverEyebrow')}</p><h2>{t('transactionsTitle')}</h2><p className="page-intro">{t('transactionIntro')}</p></div>
+      <SectionIntro title={t('transactionsTitle')} copy={t('transactionIntro')} />
       {error ? <Alert className="page-alert" title={t('transactionFailed')} onRetry={() => { setLoading(true); void reload(); }} retryLabel={t('tryAgain')}>{error}</Alert> : null}
-      {loading ? <RowSkeletons label={t('loadingTransactions')} tall /> : transactions.length === 0 && !error ? <EmptyState title={t('nothingMoving')} copy={t('acceptedBecomeTransactions')} /> : (
-        <div className="transaction-list">{transactions.map((transaction) => (
-          <article className="transaction-row" key={transaction.id}>
-            <div className="transaction-stamp"><RefreshCw size={19} /></div>
-            <div className="transaction-copy"><span className={`request-status status-${transaction.status}`}>{formatStatus(transaction.status, t)}</span><h3>{transaction.listing_title || t('transactionsTitle')}</h3><p>{formatMeetup(transaction.fulfillment_method, t)} · {transaction.id.slice(0, 8)}</p></div>
-            {transaction.status === 'arranging'
-              ? <Button size="sm" onClick={() => void complete(transaction)} loading={busyId === transaction.id}>{t('markComplete')}</Button>
-              : <span className="completed-label"><Check size={15} /> {formatStatus(transaction.status, t)}</span>}
-          </article>
-        ))}</div>
+      {loading ? <div className="panel"><RowSkeletons label={t('loadingTransactions')} tall /></div> : transactions.length === 0 && !error ? (
+        <EmptyState icon={<Handshake size={24} />} title={t('nothingMoving')} description={t('acceptedBecomeTransactions')} />
+      ) : (
+        <div className="panel">
+          <ul className="row-list">{transactions.map((transaction) => (
+            <li className="row transaction-row" key={transaction.id}>
+              <span className="row-icon" aria-hidden="true"><Handshake size={18} /></span>
+              <div className="row-main">
+                <p className="row-title">{transaction.listing_title || t('transactionsTitle')}</p>
+                <p className="row-meta">{formatMeetup(transaction.fulfillment_method, t)} · <span className="mono-id">#{transaction.id.slice(0, 8)}</span></p>
+              </div>
+              <div className="row-end">
+                <StatusPill status={transaction.status} />
+                {transaction.status === 'arranging'
+                  ? <Button size="sm" onClick={() => void complete(transaction)} loading={busyId === transaction.id}>{t('markComplete')}</Button>
+                  : <span className="completed-label"><CheckCircle2 size={16} aria-hidden="true" /> {t('complete')}</span>}
+              </div>
+            </li>
+          ))}</ul>
+        </div>
       )}
     </>
   );
@@ -395,13 +445,13 @@ function ListingForm({ initial, onSave, onUpload, saving }: {
 
   useEffect(() => {
     if (!photo) {
-      setPhotoPreview(initial?.images?.[0] ?? '');
+      setPhotoPreview(initial ? listingImage(initial) ?? '' : '');
       return;
     }
     const previewUrl = URL.createObjectURL(photo);
     setPhotoPreview(previewUrl);
     return () => URL.revokeObjectURL(previewUrl);
-  }, [initial?.images, photo]);
+  }, [initial, photo]);
 
   const setFieldError = (field: ListingField, key?: MessageKey) => setErrors((current) => ({ ...current, [field]: key }));
 
@@ -445,7 +495,6 @@ function ListingForm({ initial, onSave, onUpload, saving }: {
         uploadedImage = (await onUpload(photo)).url;
       } catch (reason) {
         const text = describeError(reason, t, 'imageUploadFailed');
-        setFieldError('photo', undefined);
         setFormError(text);
         toast.error(t('imageUploadFailed'), text);
         return;
@@ -463,39 +512,84 @@ function ListingForm({ initial, onSave, onUpload, saving }: {
     }
   };
 
-  const invalid = (field: ListingField) => ({
+  const control = (field: ListingField) => ({
     id: `listing-${field}`,
+    className: 'control',
     'aria-invalid': errors[field] ? true : undefined,
     'aria-describedby': errors[field] ? `listing-${field}-error` : undefined,
   });
 
   const busy = saving || uploading;
 
-  return <form className="listing-form" onSubmit={submit} noValidate>
-    <label className="form-field">{t('bookTitle')}<input {...invalid('title')} value={title} onChange={(event) => { setTitle(event.target.value); setFieldError('title'); }} maxLength={180} /><FieldError id="listing-title-error">{errors.title ? t(errors.title) : null}</FieldError></label>
-    <label className="form-field"><span className="field-label">{t('author')} <span className="optional-label">{t('optional')}</span></span><input value={author} onChange={(event) => setAuthor(event.target.value)} maxLength={120} /></label>
-    <div className="editor-two-col"><label>{t('condition')}<select value={condition} onChange={(event) => setCondition(event.target.value)}><option value="like_new">{t('likeNew')}</option><option value="good">{t('good')}</option><option value="acceptable">{t('acceptable')}</option><option value="heavily_used">{t('heavilyUsed')}</option></select></label><label>{t('offer')}<select value={listingType} onChange={(event) => { setListingType(event.target.value as Listing['listing_type']); setFieldError('price'); }}><option value="sale">{t('forSale')}</option><option value="exchange">{t('exchange')}</option><option value="free">{t('free')}</option></select></label></div>
-    {listingType === 'sale' ? <label className="form-field">{t('priceEgp')}<input {...invalid('price')} type="number" inputMode="numeric" value={price} onChange={(event) => { setPrice(event.target.value); setFieldError('price'); }} min="0" step="1" /><FieldError id="listing-price-error">{errors.price ? t(errors.price) : null}</FieldError></label> : null}
-    <label className="form-field"><span className="field-label">{t('bookPhoto')} <span className="optional-label">{t('optional')}</span></span><input {...invalid('photo')} type="file" accept={allowedImageTypes.join(',')} onChange={(event) => {
-      const nextPhoto = event.target.files?.[0] ?? null;
-      setFieldError('photo');
-      if (nextPhoto && (nextPhoto.size > maxImageBytes || !allowedImageTypes.includes(nextPhoto.type))) {
-        setPhoto(null);
-        setFieldError('photo', nextPhoto.size > maxImageBytes ? 'imageTooLarge' : 'invalidImageType');
-        event.target.value = '';
-        return;
-      }
-      setPhoto(nextPhoto);
-    }} /><FieldError id="listing-photo-error">{errors.photo ? t(errors.photo) : null}</FieldError></label>
-    <p className="form-safety">{t('imageUploadLimit')}</p>
-    {photoPreview ? <img className="listing-photo-preview" src={photoPreview} alt={t('coverAlt')} /> : null}
-    <label className="form-field">{t('approximateArea')}<input {...invalid('area')} value={area} onChange={(event) => { setArea(event.target.value); setFieldError('area'); }} maxLength={100} /><FieldError id="listing-area-error">{errors.area ? t(errors.area) : null}</FieldError></label>
-    <label className="form-field">{t('meetupPreference')}<select value={meetup} onChange={(event) => setMeetup(event.target.value)}><option value="direct_meetup">{t('directMeetup')}</option><option value="pickup_point">{t('pickupPoint')}</option><option value="either">{t('either')}</option></select></label>
-    <label className="form-field"><span className="field-label">{t('aboutCopy')} <span className="optional-label">{t('optional')}</span></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={1500} rows={4} placeholder={t('copyPlaceholder')} /></label>
-    <p className="form-safety">{t('publicSafety')}</p>
-    {formError ? <Alert onDismiss={() => setFormError('')} dismissLabel={t('dismiss')}>{formError}</Alert> : null}
-    <Button type="submit" className="save-listing-button" loading={busy}><span>{busy ? t('saving') : initial ? t('saveChanges') : t('publishShelf')}</span>{busy ? null : <ArrowUpRight size={17} className="flip-rtl" />}</Button>
-  </form>;
+  return (
+    <form className="form-stack" onSubmit={submit} noValidate>
+      <div className="field">
+        <label className="field-label" htmlFor="listing-title">{t('bookTitle')}</label>
+        <input {...control('title')} value={title} onChange={(event) => { setTitle(event.target.value); setFieldError('title'); }} maxLength={180} />
+        <FieldError id="listing-title-error">{errors.title ? t(errors.title) : null}</FieldError>
+      </div>
+      <div className="field">
+        <label className="field-label" htmlFor="listing-author">{t('author')} <span className="optional-label">{t('optional')}</span></label>
+        <input id="listing-author" className="control" value={author} onChange={(event) => setAuthor(event.target.value)} maxLength={120} />
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label className="field-label" htmlFor="listing-condition">{t('condition')}</label>
+          <select id="listing-condition" className="control" value={condition} onChange={(event) => setCondition(event.target.value)}>
+            <option value="like_new">{t('likeNew')}</option><option value="good">{t('good')}</option><option value="acceptable">{t('acceptable')}</option><option value="heavily_used">{t('heavilyUsed')}</option>
+          </select>
+        </div>
+        <div className="field">
+          <label className="field-label" htmlFor="listing-type">{t('offer')}</label>
+          <select id="listing-type" className="control" value={listingType} onChange={(event) => { setListingType(event.target.value as Listing['listing_type']); setFieldError('price'); }}>
+            <option value="sale">{t('forSale')}</option><option value="exchange">{t('exchange')}</option><option value="free">{t('free')}</option>
+          </select>
+        </div>
+      </div>
+      {listingType === 'sale' ? (
+        <div className="field">
+          <label className="field-label" htmlFor="listing-price">{t('priceEgp')}</label>
+          <input {...control('price')} type="number" inputMode="numeric" value={price} onChange={(event) => { setPrice(event.target.value); setFieldError('price'); }} min="0" step="1" />
+          <FieldError id="listing-price-error">{errors.price ? t(errors.price) : null}</FieldError>
+        </div>
+      ) : null}
+      <div className="field">
+        <label className="field-label" htmlFor="listing-photo">{t('bookPhoto')} <span className="optional-label">{t('optional')}</span></label>
+        <input {...control('photo')} type="file" accept={allowedImageTypes.join(',')} onChange={(event) => {
+          const nextPhoto = event.target.files?.[0] ?? null;
+          setFieldError('photo');
+          if (nextPhoto && (nextPhoto.size > maxImageBytes || !allowedImageTypes.includes(nextPhoto.type))) {
+            setPhoto(null);
+            setFieldError('photo', nextPhoto.size > maxImageBytes ? 'imageTooLarge' : 'invalidImageType');
+            event.target.value = '';
+            return;
+          }
+          setPhoto(nextPhoto);
+        }} />
+        <span className="field-hint">{t('imageUploadLimit')}</span>
+        <FieldError id="listing-photo-error">{errors.photo ? t(errors.photo) : null}</FieldError>
+        {photoPreview ? <img className="photo-preview" src={photoPreview} alt={t('coverAlt')} /> : null}
+      </div>
+      <div className="field">
+        <label className="field-label" htmlFor="listing-area">{t('approximateArea')}</label>
+        <input {...control('area')} value={area} onChange={(event) => { setArea(event.target.value); setFieldError('area'); }} maxLength={100} />
+        <FieldError id="listing-area-error">{errors.area ? t(errors.area) : null}</FieldError>
+      </div>
+      <div className="field">
+        <label className="field-label" htmlFor="listing-meetup">{t('meetupPreference')}</label>
+        <select id="listing-meetup" className="control" value={meetup} onChange={(event) => setMeetup(event.target.value)}>
+          <option value="direct_meetup">{t('directMeetup')}</option><option value="pickup_point">{t('pickupPoint')}</option><option value="either">{t('either')}</option>
+        </select>
+      </div>
+      <div className="field">
+        <label className="field-label" htmlFor="listing-description">{t('aboutCopy')} <span className="optional-label">{t('optional')}</span></label>
+        <textarea id="listing-description" className="control" value={description} onChange={(event) => setDescription(event.target.value)} maxLength={1500} rows={4} placeholder={t('copyPlaceholder')} />
+        <span className="field-hint">{t('publicSafety')}</span>
+      </div>
+      {formError ? <Alert onDismiss={() => setFormError('')} dismissLabel={t('dismiss')}>{formError}</Alert> : null}
+      <Button type="submit" size="lg" className="w-full" loading={busy}>{busy ? t('saving') : initial ? t('saveChanges') : t('publishShelf')}</Button>
+    </form>
+  );
 }
 
 function scrollToEditor() {
@@ -506,28 +600,44 @@ function completeLabel(listing: Listing, t: (key: MessageKey) => string) {
   return listing.listing_type === 'sale' ? t('markSold') : listing.listing_type === 'exchange' ? t('markExchanged') : t('markGivenAway');
 }
 
-function Stat({ label, value, note, icon, accent = false }: { label: string; value: string; note: string; icon: React.ReactNode; accent?: boolean }) {
-  return <article className={accent ? 'stat-card stat-accent' : 'stat-card'}><div className="stat-head"><span>{label}</span><span className="stat-icon">{icon}</span></div><strong>{value}</strong><small>{note}</small></article>;
+function PanelHead({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
+  return (
+    <div className="panel-head">
+      <div><h2 className="panel-title">{title}</h2>{subtitle ? <p className="panel-subtitle">{subtitle}</p> : null}</div>
+      {action}
+    </div>
+  );
 }
 
-function ListingLine({ listing }: { listing: Listing }) {
+function SectionIntro({ title, copy }: { title: string; copy: string }) {
+  return <div className="section-intro"><h2 className="section-intro-title">{title}</h2><p>{copy}</p></div>;
+}
+
+function StatCard({ tone, icon, label, value, note }: { tone: 'primary' | 'warning' | 'info'; icon: React.ReactNode; label: string; value: string; note: string }) {
+  return (
+    <article className={`stat-card tone-${tone}`}>
+      <span className="stat-icon" aria-hidden="true">{icon}</span>
+      <div><p className="stat-label">{label}</p><p className="stat-value">{value}</p><p className="stat-note">{note}</p></div>
+    </article>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
   const { t } = useLanguage();
-  return <article className="compact-row"><span className={`mini-book mini-${listing.listing_type}`}><BookOpen size={17} /></span><span className="compact-row-copy"><strong>{listing.title}</strong><small>{listing.area} · {formatCondition(listing.condition, t)} · {formatStatus(listing.status, t)}</small></span><span className="compact-row-price">{listing.price_egp != null ? `${listing.price_egp} ${t('currencyCode')}` : listing.listing_type === 'free' ? t('free') : t('swap')}</span></article>;
+  return <span className={`status-pill status-${status}`}>{formatStatus(status, t)}</span>;
 }
 
-function RequestLine({ request }: { request: BookRequest }) {
-  const { t } = useLanguage();
-  return <article className="compact-row"><span className="request-initial">{request.status.slice(0, 1).toUpperCase()}</span><span className="compact-row-copy"><strong>{request.listing_title || t('requestsTitle')}</strong><small>{request.message || t('noMessage')}</small></span><span className={`tiny-status status-${request.status}`}>{formatStatus(request.status, t)}</span></article>;
-}
-
-function EmptyState({ title, copy }: { title: string; copy: string }) {
-  return <div className="empty-account"><span className="empty-symbol"><BookOpen size={22} /></span><h3>{title}</h3><p>{copy}</p></div>;
+function BookThumb({ listing, large = false }: { listing: Listing; large?: boolean }) {
+  const image = listingImage(listing);
+  const className = large ? 'row-thumb row-thumb-lg' : 'row-thumb';
+  if (image) return <img className={className} src={image} alt="" />;
+  return <span className={`${className} row-thumb-placeholder thumb-${listing.listing_type}`} aria-hidden="true"><BookOpen size={large ? 22 : 18} /></span>;
 }
 
 function RowSkeletons({ label, tall = false }: { label: string; tall?: boolean }) {
-  return <div className="compact-list" aria-busy="true" aria-label={label}>{[0, 1, 2].map((index) => <div key={index} className={tall ? 'skeleton skeleton-row skeleton-row-tall' : 'skeleton skeleton-row'} />)}</div>;
+  return <div className="row-list" aria-busy="true" aria-label={label}>{[0, 1, 2].map((index) => <div key={index} className={tall ? 'skeleton sk-row sk-row-tall' : 'skeleton sk-row'} />)}</div>;
 }
 
 function CardSkeletons({ label }: { label: string }) {
-  return <div className="request-list" aria-busy="true" aria-label={label}>{[0, 1, 2, 3].map((index) => <div key={index} className="skeleton request-card" />)}</div>;
+  return <div className="card-grid" aria-busy="true" aria-label={label}>{[0, 1, 2, 3].map((index) => <div key={index} className="skeleton sk-card" />)}</div>;
 }

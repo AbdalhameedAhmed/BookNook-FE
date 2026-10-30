@@ -39,7 +39,7 @@ export function Dialog({ open, onClose, title, description, icon, tone = 'defaul
     >
       {open ? (
         <div className="ui-dialog-panel">
-          <button type="button" className="ui-dialog-close" onClick={onClose} aria-label={closeLabel}><X size={18} /></button>
+          <Button variant="ghost" size="icon-sm" className="ui-dialog-close" onClick={onClose} aria-label={closeLabel}><X size={18} /></Button>
           {icon ? <span className="ui-dialog-icon" aria-hidden="true">{icon}</span> : null}
           <h2 id={titleId}>{title}</h2>
           {description ? <div id={descriptionId} className="ui-dialog-description">{description}</div> : null}

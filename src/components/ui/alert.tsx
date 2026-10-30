@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { AlertCircle, CheckCircle2, Info, RotateCw, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Button } from './button';
 
 type AlertVariant = 'error' | 'success' | 'info';
 
@@ -25,9 +26,9 @@ export function Alert({ variant = 'error', title, children, onRetry, retryLabel,
       <div className="ui-alert-body">
         {title ? <strong>{title}</strong> : null}
         {children ? <p>{children}</p> : null}
-        {onRetry ? <button type="button" className="ui-alert-retry" onClick={onRetry}><RotateCw size={14} aria-hidden="true" />{retryLabel}</button> : null}
+        {onRetry ? <Button variant="outline" size="sm" className="ui-alert-retry" onClick={onRetry}><RotateCw size={14} aria-hidden="true" />{retryLabel}</Button> : null}
       </div>
-      {onDismiss ? <button type="button" className="ui-alert-dismiss" onClick={onDismiss} aria-label={dismissLabel}><X size={16} /></button> : null}
+      {onDismiss ? <Button variant="ghost" size="icon-sm" className="ui-alert-dismiss" onClick={onDismiss} aria-label={dismissLabel}><X size={16} /></Button> : null}
     </div>
   );
 }

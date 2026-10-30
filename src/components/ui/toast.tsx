@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Button } from './button';
 
 type ToastVariant = 'success' | 'error' | 'info';
 
@@ -71,7 +72,7 @@ function ToastItem({ toast, onDismiss, closeLabel }: { toast: Toast; onDismiss: 
         <strong>{toast.title}</strong>
         {toast.description ? <p>{toast.description}</p> : null}
       </div>
-      <button type="button" className="toast-close" onClick={() => onDismiss(toast.id)} aria-label={closeLabel}><X size={16} /></button>
+      <Button variant="ghost" size="icon-sm" className="toast-close" onClick={() => onDismiss(toast.id)} aria-label={closeLabel}><X size={16} /></Button>
       {paused ? null : <span className="toast-timer" style={{ animationDuration: `${durations[toast.variant]}ms` }} aria-hidden="true" />}
     </div>
   );
