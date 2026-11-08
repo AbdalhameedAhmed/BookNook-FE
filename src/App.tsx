@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react';
-import { BookOpen, Compass, Languages, Menu, ShieldCheck, X } from 'lucide-react';
-import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Compass, Inbox, Library, Moon, PlusCircle, Sun, UserRound } from 'lucide-react';
+import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { ProtectedRoute, useAuth } from './auth';
 import Storefront from './pages/Storefront';
 import BookDetail from './pages/BookDetail';
 import SignIn from './pages/SignIn';
+import ListingEditor from './pages/ListingEditor';
 import { AccountLayout, AccountOverview, MyBooksPage, RequestsPage, TransactionsPage } from './pages/Account';
 import { useLanguage } from './i18n';
-import { Button, buttonVariants } from './components/ui/button';
+import { useTheme } from './theme';
+import { buttonClass } from './components/ui/button';
 import { EmptyState } from './components/ui/empty-state';
+import { cn } from './lib/utils';
+import { ui } from './lib/ui';
 
 export default function App() {
   return (
@@ -18,11 +22,14 @@ export default function App() {
         <Route path="/books/:listingId" element={<BookDetail />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/login" element={<Navigate to="/signin" replace />} />
+        <Route path="/sell" element={<ProtectedRoute><ListingEditor /></ProtectedRoute>} />
+        <Route path="/account/books/:listingId/edit" element={<ProtectedRoute><ListingEditor /></ProtectedRoute>} />
         <Route path="/account" element={<ProtectedRoute><AccountLayout /></ProtectedRoute>}>
           <Route index element={<AccountOverview />} />
           <Route path="books" element={<MyBooksPage />} />
           <Route path="requests" element={<RequestsPage />} />
-          <Route path="transactions" element={<TransactionsPage />} />
+          <Route path="handovers" element={<TransactionsPage />} />
+          <Route path="transactions" element={<Navigate to="/account/handovers" replace />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
@@ -30,97 +37,119 @@ export default function App() {
   );
 }
 
+/** Small outlined control in the top bar (theme and language switches). */
+const topbarButton = 'inline-flex min-h-10 items-center justify-center rounded-lg border border-line bg-transparent text-ink-2 hover:bg-sunk hover:text-ink';
+const topnavLink = 'rounded-lg px-3 py-2 text-15 font-medium text-ink-2 hover:bg-sunk hover:text-ink';
+const topnavClass = ({ isActive }: { isActive: boolean }) => cn(topnavLink, isActive && 'rounded-none text-ink shadow-[inset_0_-2px_0_rgb(var(--glaze))]');
+const tabbarLink = 'flex min-h-[58px] flex-col items-center justify-center gap-0.5 text-2xs font-medium text-ink-3';
+const tabbarClass = ({ isActive }: { isActive: boolean }) => cn(tabbarLink, isActive && 'text-glaze');
+
 function SiteLayout() {
   const { session } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    setMenuOpen(false);
     if (location.hash) {
-      document.getElementById(location.hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
       return;
     }
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0 });
   }, [location.pathname, location.hash]);
 
   const displayName = session?.user.user_metadata?.display_name || session?.user.email || '';
-  const navLinks = (
-    <>
-      <Link className="nav-link" to={{ pathname: '/', hash: '#listings' }}>{t('explore')}</Link>
-      <Link className="nav-link" to={{ pathname: '/', hash: '#how-it-works' }}>{t('how')}</Link>
-      <Link className="nav-link" to={session ? '/account/books?new=1' : '/signin'} state={session ? undefined : { from: '/account/books' }}>{t('listBook')}</Link>
-    </>
-  );
+  const sellTarget = session ? '/sell' : '/signin';
+  const sellState = session ? undefined : { from: '/sell' };
 
   return (
-    <div className="app-shell">
-      <a href="#main" className="skip-link">{t('skipToContent')}</a>
-      <header className="site-header">
-        <div className="container header-inner">
-          <Logo tagline={t('brandTag')} />
-          <nav className="nav" aria-label={t('mainNav')}>{navLinks}</nav>
-          <div className="header-actions">
-            <Button variant="ghost" size="sm" onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')} aria-label={language === 'en' ? t('switchToArabic') : t('switchToEnglish')}>
-              <Languages size={16} /><span className="hide-sm">{t('language')}</span>
-            </Button>
+    <div className="flex min-h-screen flex-col pb-[calc(58px+env(safe-area-inset-bottom))] md:pb-0">
+      <a href="#main" className="absolute -top-[60px] start-3 z-[100] rounded-ctl bg-ink px-4 py-2.5 font-semibold text-paper focus:top-3">{t('skipToContent')}</a>
+      <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur-[10px]">
+        <div className={cn(ui.wrap, 'flex h-[var(--topbar-h)] items-center gap-7')}>
+          <Wordmark />
+          <nav className="hidden gap-0.5 md:flex" aria-label={t('mainNav')}>
+            <NavLink to="/" end className={topnavClass}>{t('navBrowse')}</NavLink>
+            {session
+              ? <NavLink to="/sell" className={topnavClass}>{t('listBook')}</NavLink>
+              : <Link to={sellTarget} state={sellState} className={topnavLink}>{t('listBook')}</Link>}
+            {session ? <NavLink to="/account/requests" className={topnavClass}>{t('navRequests')}</NavLink> : null}
+          </nav>
+          <div className="ms-auto flex items-center gap-2">
+            <button
+              type="button"
+              className={cn(topbarButton, 'w-10')}
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? t('switchToLight') : t('switchToDark')}
+              title={theme === 'dark' ? t('switchToLight') : t('switchToDark')}
+            >
+              {theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+            </button>
+            <button
+              type="button"
+              className={cn(topbarButton, 'px-3 text-sm font-medium')}
+              onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}
+              aria-label={language === 'en' ? t('switchToArabic') : t('switchToEnglish')}
+              lang={language === 'en' ? 'ar' : 'en'}
+            >
+              {t('language')}
+            </button>
             {session ? (
-              <Link className="account-chip" to="/account">
-                <span className="avatar avatar-sm" aria-hidden="true">{displayName.slice(0, 1).toUpperCase()}</span>
-                <span className="hide-sm">{t('mySpace')}</span>
+              <Link className="inline-flex rounded-full" to="/account" aria-label={t('navAccount')}>
+                <span className="grid h-[38px] w-[38px] place-items-center rounded-full bg-glaze font-semibold text-on-glaze" aria-hidden="true">{displayName.slice(0, 1).toUpperCase()}</span>
               </Link>
             ) : location.pathname === '/signin' ? null : (
-              <Link className={buttonVariants({ size: 'sm' })} to="/signin">{t('signIn')}</Link>
+              <Link className={buttonClass({ variant: 'secondary', size: 'sm' })} to="/signin">{t('signIn')}</Link>
             )}
-            <Button variant="ghost" size="icon" className="menu-toggle" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen} aria-label={menuOpen ? t('closeMenu') : t('openMenu')}>
-              {menuOpen ? <X size={20} /> : <Menu size={20} />}
-            </Button>
           </div>
         </div>
-        {menuOpen ? <nav className="mobile-nav" aria-label={t('mainNav')}><div className="container">{navLinks}</div></nav> : null}
       </header>
 
-      <main id="main" className="app-main"><Outlet /></main>
+      <main id="main" className="flex-1"><Outlet /></main>
 
-      <footer className="site-footer">
-        <div className="container footer-grid">
-          <div className="footer-brand">
-            <Logo tagline={t('brandTag')} inverted />
-            <p>{t('footerAbout')}</p>
-          </div>
+      <footer className="border-t border-line py-10 text-15 text-ink-2">
+        <div className={cn(ui.wrap, 'grid gap-7 md:grid-cols-[1fr_1fr]')}>
           <div>
-            <h2 className="footer-title">{t('footerExplore')}</h2>
-            <ul className="footer-links">
-              <li><Link to={{ pathname: '/', hash: '#listings' }}>{t('explore')}</Link></li>
-              <li><Link to={{ pathname: '/', hash: '#how-it-works' }}>{t('how')}</Link></li>
-              <li><Link to={session ? '/account/books?new=1' : '/signin'}>{t('listBook')}</Link></li>
-              <li><Link to={session ? '/account' : '/signin'}>{session ? t('mySpace') : t('signIn')}</Link></li>
-            </ul>
+            <Wordmark />
+            <p className="mt-3 max-w-[44ch]">{t('footerAbout')}</p>
           </div>
-          <div>
-            <h2 className="footer-title">{t('footerSafetyTitle')}</h2>
-            <ul className="footer-links footer-safety">
-              <li><ShieldCheck size={16} aria-hidden="true" />{t('safetyMeet')}</li>
-              <li><ShieldCheck size={16} aria-hidden="true" />{t('safetyPay')}</li>
-              <li><ShieldCheck size={16} aria-hidden="true" />{t('safetyPrivate')}</li>
-            </ul>
-          </div>
-        </div>
-        <div className="container footer-bottom">
-          <span>© {new Date().getFullYear()} BookNook. {t('rightsReserved')}</span>
-          <span>{t('detailSafety')}</span>
+          <ul className="grid gap-2" aria-label={t('footerSafetyTitle')}>
+            {(['safetyMeet', 'safetyPay', 'safetyPrivate'] as const).map((key) => (
+              <li key={key} className="border-s-[3px] border-glaze ps-3.5">{t(key)}</li>
+            ))}
+          </ul>
+          <p className="text-13 text-ink-3 md:col-span-full md:border-t md:border-line md:pt-5">© {new Date().getFullYear()} {t('brandName')}. {t('detailSafety')}</p>
         </div>
       </footer>
+
+      <nav className="fixed inset-x-0 bottom-0 z-[45] grid auto-cols-[1fr] grid-flow-col border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden" aria-label={t('mainNav')}>
+        <NavLink to="/" end className={tabbarClass}><Compass size={22} aria-hidden="true" /><span>{t('navBrowse')}</span></NavLink>
+        {session
+          ? <NavLink to="/sell" className={tabbarClass}><PlusCircle size={22} aria-hidden="true" /><span>{t('listBook')}</span></NavLink>
+          : <Link to={sellTarget} state={sellState} className={tabbarLink}><PlusCircle size={22} aria-hidden="true" /><span>{t('listBook')}</span></Link>}
+        {session ? (
+          <>
+            <NavLink to="/account/requests" className={tabbarClass}><Inbox size={22} aria-hidden="true" /><span>{t('navRequests')}</span></NavLink>
+            <NavLink to="/account" end className={tabbarClass}><UserRound size={22} aria-hidden="true" /><span>{t('navAccount')}</span></NavLink>
+          </>
+        ) : (
+          <NavLink to="/signin" className={tabbarClass}><UserRound size={22} aria-hidden="true" /><span>{t('signIn')}</span></NavLink>
+        )}
+      </nav>
     </div>
   );
 }
 
-function Logo({ tagline, inverted = false }: { tagline: string; inverted?: boolean }) {
+function Wordmark() {
+  const { t } = useLanguage();
   return (
-    <Link to="/" className={inverted ? 'logo logo-inverted' : 'logo'} aria-label="BookNook home">
-      <span className="logo-mark" aria-hidden="true"><BookOpen size={18} strokeWidth={2.25} /></span>
-      <span className="logo-text"><strong>BookNook</strong><small>{tagline}</small></span>
+    <Link to="/" className="inline-flex items-end gap-[9px] text-ink" aria-label={t('brandName')}>
+      <span className="inline-flex h-6 items-end gap-0.5" aria-hidden="true">
+        <i className="block h-[17px] w-[5px] rounded-t-[1px] bg-[#12797B]" />
+        <i className="block h-[23px] w-[7px] rounded-t-[1px] bg-[#2B4A9A]" />
+        <i className="block h-[14px] w-[5px] rounded-t-[1px] bg-[#C9921F]" />
+      </span>
+      <span className="font-wordmark text-21 font-bold leading-none tracking-[-0.02em] ar:text-2xl ar:leading-[0.9] ar:tracking-normal">{t('brandName')}</span>
     </Link>
   );
 }
@@ -128,14 +157,14 @@ function Logo({ tagline, inverted = false }: { tagline: string; inverted?: boole
 function NotFound() {
   const { t } = useLanguage();
   return (
-    <div className="container page">
+    <div className={cn(ui.wrap, ui.page)}>
       <EmptyState
         size="large"
         headingLevel="h1"
-        icon={<Compass size={28} />}
+        icon={<Library size={28} />}
         title={t('notFoundTitle')}
         description={t('notFoundCopy')}
-        action={<Link className={buttonVariants()} to="/">{t('backBooknook')}</Link>}
+        action={<Link className={buttonClass()} to="/">{t('browseBooks')}</Link>}
       />
     </div>
   );

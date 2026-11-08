@@ -16,6 +16,7 @@ type ToastApi = {
 
 const ToastContext = createContext<ToastApi | null>(null);
 const icons = { success: CheckCircle2, error: AlertCircle, info: Info };
+const iconTones = { success: 'text-toast-success', error: 'text-toast-error', info: 'text-toast-info' };
 // Errors stay a little longer so they can be read.
 const durations = { success: 4000, info: 4500, error: 7000 };
 const maxVisible = 4;
@@ -41,7 +42,7 @@ export function ToastProvider({ children, closeLabel }: { children: ReactNode; c
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="toast-viewport" aria-live="polite" aria-relevant="additions">
+      <div className="fixed bottom-[calc(74px+env(safe-area-inset-bottom))] end-4 z-[60] grid w-[min(380px,calc(100%-32px))] gap-2.5 md:bottom-6" aria-live="polite" aria-relevant="additions">
         {toasts.map((toast) => <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} closeLabel={closeLabel} />)}
       </div>
     </ToastContext.Provider>
@@ -60,20 +61,20 @@ function ToastItem({ toast, onDismiss, closeLabel }: { toast: Toast; onDismiss: 
 
   return (
     <div
-      className={cn('toast', `toast-${toast.variant}`)}
+      className="relative flex animate-rise-toast gap-3 overflow-hidden rounded-xl bg-toast-bg py-3.5 pe-12 ps-4 text-toast-ink shadow-[0_16px_32px_-12px_rgb(14_21_30/.45)]"
       role={toast.variant === 'error' ? 'alert' : 'status'}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <Icon className="toast-icon" size={20} aria-hidden="true" />
-      <div className="toast-body">
-        <strong>{toast.title}</strong>
-        {toast.description ? <p>{toast.description}</p> : null}
+      <Icon className={cn('mt-px shrink-0', iconTones[toast.variant])} size={20} aria-hidden="true" />
+      <div className="grid gap-0.5 text-15">
+        <strong className="font-semibold">{toast.title}</strong>
+        {toast.description ? <p className="opacity-[.85]">{toast.description}</p> : null}
       </div>
-      <Button variant="ghost" size="icon-sm" className="toast-close" onClick={() => onDismiss(toast.id)} aria-label={closeLabel}><X size={16} /></Button>
-      {paused ? null : <span className="toast-timer" style={{ animationDuration: `${durations[toast.variant]}ms` }} aria-hidden="true" />}
+      <Button variant="ghost" size="icon" className="absolute end-1.5 top-1.5 text-current [&:not(:disabled):hover]:bg-[rgb(127_127_127/.2)] [&:not(:disabled):hover]:text-current" onClick={() => onDismiss(toast.id)} aria-label={closeLabel}><X size={16} /></Button>
+      {paused ? null : <span className="absolute bottom-0 start-0 h-[3px] w-full origin-left animate-drain bg-current opacity-30 motion-reduce:hidden rtl:origin-right" style={{ animationDuration: `${durations[toast.variant]}ms` }} aria-hidden="true" />}
     </div>
   );
 }

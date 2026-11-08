@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { ArrowRight, BookOpen, CheckCircle2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { DecorativeShelf } from '../components/book';
+import { cn } from '../lib/utils';
+import { ui } from '../lib/ui';
+
+const switchButton = 'min-h-[42px] rounded-[9px] border-0 bg-transparent px-1.5 py-px font-medium text-ink-2 aria-pressed:bg-surface aria-pressed:font-semibold aria-pressed:text-ink aria-pressed:shadow-[0_1px_2px_rgb(23_32_46/.12)]';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { useAuth } from '../auth';
@@ -36,7 +41,7 @@ export default function SignIn() {
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (isLoading) return <div className="route-loading"><span className="loading-mark" />{t('loadingSession')}</div>;
+  if (isLoading) return <div className="px-4 py-24 text-center text-ink-3" aria-live="polite">{t('loadingSession')}</div>;
   if (session) return <Navigate to={destination} replace />;
 
   const isSignUp = mode === 'sign_up';
@@ -103,87 +108,72 @@ export default function SignIn() {
     setFieldErrors({});
   };
 
-  const fieldProps = (field: Field, describedBy?: string) => {
+  const fieldProps = (field: Field, describedBy?: string, className?: string) => {
     const ids = [fieldErrors[field] ? `signin-${field}-error` : null, describedBy].filter(Boolean).join(' ');
     return {
       id: `signin-${field}`,
-      className: 'control control-lg',
+      className: cn(ui.control, className),
       'aria-invalid': fieldErrors[field] ? true : undefined,
       'aria-describedby': ids || undefined,
     };
   };
 
   return (
-    <div className="auth-page">
-      <div className="container">
-        <div className="auth-shell">
-          <section className="auth-form-side">
-            <div className="auth-form-inner">
-              <span className="auth-mark" aria-hidden="true"><BookOpen size={22} strokeWidth={2.25} /></span>
-              <h1 className="auth-title">{isSignUp ? t('signUpTitle') : t('signInTitle')}</h1>
-              <p className="auth-subtitle">{isSignUp ? t('signUpCopy') : t('signInCopy')}</p>
+    <div className="mx-auto grid w-full max-w-[1080px] gap-12 px-[var(--gutter)] pb-[72px] pt-8 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-20 lg:pt-16">
+      <div className="grid w-full max-w-[420px] gap-[18px]">
+        <h1 className={ui.pageTitle}>{isSignUp ? t('signUpTitle') : t('signInTitle')}</h1>
+        <p className={ui.muted}>{isSignUp ? t('signUpCopy') : t('signInCopy')}</p>
 
-              <div className="segmented segmented-block auth-tabs" role="group" aria-label={t('signIn')}>
-                <button type="button" className={isSignUp ? 'segmented-item' : 'segmented-item is-active'} aria-pressed={!isSignUp} onClick={() => switchMode('sign_in')}>{t('signIn')}</button>
-                <button type="button" className={isSignUp ? 'segmented-item is-active' : 'segmented-item'} aria-pressed={isSignUp} onClick={() => switchMode('sign_up')}>{t('createAccount')}</button>
-              </div>
-
-              {formError ? (
-                <Alert title={isSignUp ? t('signUpFailed') : t('signInFailed')} onDismiss={() => setFormError('')} dismissLabel={t('dismiss')}>
-                  {formError}
-                </Alert>
-              ) : null}
-
-              <form onSubmit={submit} className="form-stack" noValidate>
-                {isSignUp ? (
-                  <div className="field">
-                    <label className="field-label" htmlFor="signin-displayName">{t('yourName')}</label>
-                    <input {...fieldProps('displayName')} value={displayName} onChange={(event) => { setDisplayName(event.target.value); clearFieldError('displayName'); }} autoComplete="name" placeholder={t('nameHint')} maxLength={80} />
-                    <FieldError id="signin-displayName-error">{fieldErrors.displayName ? t(fieldErrors.displayName) : null}</FieldError>
-                  </div>
-                ) : null}
-                <div className="field">
-                  <label className="field-label" htmlFor="signin-email">{t('email')}</label>
-                  <input {...fieldProps('email')} type="email" inputMode="email" value={email} onChange={(event) => { setEmail(event.target.value); clearFieldError('email'); }} autoComplete="email" placeholder="you@example.com" dir="ltr" />
-                  <FieldError id="signin-email-error">{fieldErrors.email ? t(fieldErrors.email) : null}</FieldError>
-                </div>
-                <div className="field">
-                  <label className="field-label" htmlFor="signin-password">{t('password')}</label>
-                  <div className="password-input">
-                    <input {...fieldProps('password', isSignUp ? 'signin-password-hint' : undefined)} type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => { setPassword(event.target.value); clearFieldError('password'); }} autoComplete={isSignUp ? 'new-password' : 'current-password'} placeholder={isSignUp ? t('passwordHint') : '••••••••'} />
-                    <Button variant="ghost" size="icon-sm" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('hidePassword') : t('showPassword')} aria-pressed={showPassword}>
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </Button>
-                  </div>
-                  {isSignUp && !fieldErrors.password ? <span id="signin-password-hint" className="field-hint">{t('passwordHint')}</span> : null}
-                  <FieldError id="signin-password-error">{fieldErrors.password ? t(fieldErrors.password) : null}</FieldError>
-                </div>
-                <Button className="w-full" size="lg" type="submit" loading={busy}>
-                  {busy ? t('working') : isSignUp ? t('createAccount') : t('signIn')}
-                  {busy ? null : <ArrowRight size={18} className="flip-rtl" />}
-                </Button>
-              </form>
-
-              <p className="auth-switch">
-                {isSignUp ? t('alreadyAccount') : t('newHere')}{' '}
-                <Button variant="link" onClick={() => switchMode(isSignUp ? 'sign_in' : 'sign_up')}>{isSignUp ? t('signIn') : t('createAccount')}</Button>
-              </p>
-              <p className="auth-privacy"><ShieldCheck size={16} aria-hidden="true" />{t('authPrivacy')}</p>
-            </div>
-          </section>
-
-          <aside className="auth-visual" aria-label={t('authAsideTitle')}>
-            <div className="auth-visual-content">
-              <p className="eyebrow eyebrow-inverse">{t('authStoryEyebrow')}</p>
-              <h2>{t('authAsideTitle')}</h2>
-              <p>{t('authStoryCopy')}</p>
-              <ul className="auth-benefits">
-                {benefits.map((key) => <li key={key}><span className="auth-benefit-icon" aria-hidden="true"><CheckCircle2 size={16} /></span>{t(key)}</li>)}
-              </ul>
-            </div>
-          </aside>
+        <div className="grid grid-cols-[1fr_1fr] gap-1 rounded-xl bg-sunk p-1" role="group" aria-label={t('signIn')}>
+          <button type="button" className={switchButton} aria-pressed={!isSignUp} onClick={() => switchMode('sign_in')}>{t('signIn')}</button>
+          <button type="button" className={switchButton} aria-pressed={isSignUp} onClick={() => switchMode('sign_up')}>{t('createAccount')}</button>
         </div>
+
+        {formError ? (
+          <Alert title={isSignUp ? t('signUpFailed') : t('signInFailed')} onDismiss={() => setFormError('')} dismissLabel={t('dismiss')}>
+            {formError}
+          </Alert>
+        ) : null}
+
+        <form onSubmit={submit} className={ui.stack} noValidate>
+          {isSignUp ? (
+            <div className={ui.field}>
+              <label className={ui.label} htmlFor="signin-displayName">{t('yourName')}</label>
+              <input {...fieldProps('displayName')} value={displayName} onChange={(event) => { setDisplayName(event.target.value); clearFieldError('displayName'); }} autoComplete="name" placeholder={t('nameHint')} maxLength={80} />
+              <FieldError id="signin-displayName-error">{fieldErrors.displayName ? t(fieldErrors.displayName) : null}</FieldError>
+            </div>
+          ) : null}
+          <div className={ui.field}>
+            <label className={ui.label} htmlFor="signin-email">{t('email')}</label>
+            <input {...fieldProps('email')} type="email" inputMode="email" value={email} onChange={(event) => { setEmail(event.target.value); clearFieldError('email'); }} autoComplete="email" placeholder="name@example.com" dir="ltr" />
+            <FieldError id="signin-email-error">{fieldErrors.email ? t(fieldErrors.email) : null}</FieldError>
+          </div>
+          <div className={ui.field}>
+            <label className={ui.label} htmlFor="signin-password">{t('password')}</label>
+            <div className="relative">
+              <input {...fieldProps('password', isSignUp ? 'signin-password-hint' : undefined, 'pe-14')} type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => { setPassword(event.target.value); clearFieldError('password'); }} autoComplete={isSignUp ? 'new-password' : 'current-password'} />
+              <Button variant="ghost" size="icon" className="absolute end-1 top-1/2 -translate-y-1/2" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('hidePassword') : t('showPassword')} aria-pressed={showPassword}>
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </Button>
+            </div>
+            {isSignUp && !fieldErrors.password ? <span id="signin-password-hint" className={ui.hint}>{t('passwordHint')}</span> : null}
+            <FieldError id="signin-password-error">{fieldErrors.password ? t(fieldErrors.password) : null}</FieldError>
+          </div>
+          <Button block size="lg" type="submit" loading={busy}>
+            {busy ? t('working') : isSignUp ? t('createAccount') : t('signIn')}
+          </Button>
+        </form>
+
+        <p className={cn(ui.fine, 'flex gap-2')}><ShieldCheck className="shrink-0 text-glaze" size={16} aria-hidden="true" />{t('authPrivacy')}</p>
       </div>
+
+      <aside className="hidden lg:grid lg:gap-5" aria-labelledby="auth-aside-title">
+        <DecorativeShelf />
+        <h2 id="auth-aside-title" className="mt-4 font-book text-30 font-semibold leading-[1.2]">{t('authAsideTitle')}</h2>
+        <ul>
+          {benefits.map((key) => <li key={key} className="border-t border-line py-3 text-ink-2">{t(key)}</li>)}
+        </ul>
+      </aside>
     </div>
   );
 }

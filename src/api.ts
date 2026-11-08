@@ -28,9 +28,15 @@ async function apiRequest<T>(path: string, token?: string, init: RequestInit = {
 }
 
 export const api = {
-  listings: async (query = '') => {
-    const search = query ? `?q=${encodeURIComponent(query)}` : '';
-    return apiRequest<{ items: Listing[]; total: number }>(`/api/v1/listings${search}`);
+  listings: (filters: { q?: string; listingType?: string; condition?: string; page?: number; pageSize?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (filters.q) params.set('q', filters.q);
+    if (filters.listingType) params.set('listing_type', filters.listingType);
+    if (filters.condition) params.set('condition', filters.condition);
+    if (filters.page) params.set('page', String(filters.page));
+    if (filters.pageSize) params.set('page_size', String(filters.pageSize));
+    const search = params.toString();
+    return apiRequest<{ items: Listing[]; total: number }>(`/api/v1/listings${search ? `?${search}` : ''}`);
   },
   listing: (id: string) => apiRequest<Listing>(`/api/v1/listings/${id}`),
   myListings: async (token: string) => (await apiRequest<{ items: Listing[] }>('/api/v1/me/listings', token)).items,

@@ -7,6 +7,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { LanguageProvider, useLanguage } from './i18n';
 import { ToastProvider } from './components/ui/toast';
 import { ConfirmProvider } from './components/ui/dialog';
+import { ThemeProvider } from './theme';
 
 function FeedbackProviders({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
@@ -20,13 +21,15 @@ function FeedbackProviders({ children }: { children: React.ReactNode }) {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <LanguageProvider>
-        <FeedbackProviders>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </FeedbackProviders>
-      </LanguageProvider>
+      <ThemeProvider>
+        <LanguageProvider>
+          <FeedbackProviders>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </FeedbackProviders>
+        </LanguageProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );

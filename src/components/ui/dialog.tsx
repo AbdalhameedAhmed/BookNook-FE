@@ -2,6 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 import type { ReactNode } from 'react';
 import { AlertTriangle, HelpCircle, X } from 'lucide-react';
 import { Button } from './button';
+import { cn } from '../../lib/utils';
+
+export const dialogFooter = 'mt-2 flex flex-wrap justify-end gap-2.5';
 
 type DialogProps = {
   open: boolean;
@@ -31,20 +34,20 @@ export function Dialog({ open, onClose, title, description, icon, tone = 'defaul
   return (
     <dialog
       ref={ref}
-      className={tone === 'danger' ? 'ui-dialog ui-dialog-danger' : 'ui-dialog'}
+      className="max-h-[calc(100%-32px)] w-[min(460px,calc(100%-32px))] border-0 bg-transparent p-0 text-ink backdrop:bg-[rgb(14_21_30/.55)]"
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => { event.preventDefault(); onClose(); }}
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
       {open ? (
-        <div className="ui-dialog-panel">
-          <Button variant="ghost" size="icon-sm" className="ui-dialog-close" onClick={onClose} aria-label={closeLabel}><X size={18} /></Button>
-          {icon ? <span className="ui-dialog-icon" aria-hidden="true">{icon}</span> : null}
-          <h2 id={titleId}>{title}</h2>
-          {description ? <div id={descriptionId} className="ui-dialog-description">{description}</div> : null}
+        <div className="relative grid animate-rise gap-3 rounded-2xl bg-surface p-6">
+          <Button variant="ghost" size="icon" className="absolute end-2.5 top-2.5" onClick={onClose} aria-label={closeLabel}><X size={18} /></Button>
+          {icon ? <span className={cn('grid h-11 w-11 place-items-center rounded-full', tone === 'danger' ? 'bg-pom-soft text-pom' : 'bg-glaze-soft text-glaze')} aria-hidden="true">{icon}</span> : null}
+          <h2 id={titleId} className="pe-8 font-book text-21 font-semibold">{title}</h2>
+          {description ? <div id={descriptionId} className="text-ink-2">{description}</div> : null}
           {children}
-          {footer ? <div className="ui-dialog-footer">{footer}</div> : null}
+          {footer ? <div className={dialogFooter}>{footer}</div> : null}
         </div>
       ) : null}
     </dialog>
@@ -92,8 +95,8 @@ export function ConfirmProvider({ children, closeLabel }: { children: ReactNode;
         closeLabel={closeLabel}
         footer={options ? (
           <>
-            <Button variant="outline" onClick={() => settle(false)} autoFocus>{options.cancelLabel}</Button>
-            <Button variant={options.tone === 'danger' ? 'destructive' : 'default'} onClick={() => settle(true)}>{options.confirmLabel}</Button>
+            <Button variant="secondary" onClick={() => settle(false)} autoFocus>{options.cancelLabel}</Button>
+            <Button variant={options.tone === 'danger' ? 'danger' : 'primary'} onClick={() => settle(true)}>{options.confirmLabel}</Button>
           </>
         ) : null}
       />
