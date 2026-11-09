@@ -23,6 +23,7 @@ export default function ResetPassword() {
   const [emailError, setEmailError] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const [linkExpired, setLinkExpired] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('error_code') === 'otp_expired');
 
   const sendResetLink = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -45,6 +46,7 @@ export default function ResetPassword() {
         setError(describeError(requestError, t, 'somethingWrong'));
         return;
       }
+      setLinkExpired(false);
       setSent(true);
     } catch (reason) {
       setError(describeError(reason, t, 'somethingWrong'));
@@ -91,7 +93,7 @@ export default function ResetPassword() {
     <div className={`${ui.wrap} ${ui.page}`}>
       <section className="mx-auto grid w-full max-w-[420px] gap-[18px]" aria-labelledby="reset-password-title">
         <h1 id="reset-password-title" className={ui.pageTitle}>{t('resetTitle')}</h1>
-        <p className={ui.muted}>{session ? t('newPassword') : t('resetCopy')}</p>
+        <p className={ui.muted}>{session ? t('newPassword') : linkExpired ? t('expiredResetLink') : t('resetCopy')}</p>
 
         {error ? <Alert title={t('somethingWrong')} onDismiss={() => setError('')} dismissLabel={t('dismiss')}>{error}</Alert> : null}
 

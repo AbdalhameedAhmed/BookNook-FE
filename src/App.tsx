@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Compass, Inbox, Library, Moon, PlusCircle, Sun, UserRound } from 'lucide-react';
-import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ProtectedRoute, useAuth } from './auth';
 import Storefront from './pages/Storefront';
 import BookDetail from './pages/BookDetail';
@@ -51,14 +51,20 @@ function SiteLayout() {
   const { language, setLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    const authError = new URLSearchParams(location.hash.slice(1)).get('error_code');
+    if (location.pathname === '/' && authError === 'otp_expired') {
+      navigate('/signin', { replace: true, state: { authError: 'expired' } });
+      return;
+    }
     if (location.hash) {
       document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
       return;
     }
     window.scrollTo({ top: 0 });
-  }, [location.pathname, location.hash]);
+  }, [location.pathname, location.hash, navigate]);
 
   const displayName = session?.user.user_metadata?.display_name || session?.user.email || '';
   const sellTarget = session ? '/sell' : '/signin';

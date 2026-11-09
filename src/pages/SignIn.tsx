@@ -15,7 +15,7 @@ import { Alert, FieldError } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { useToast } from '../components/ui/toast';
 
-type RedirectState = { from?: { pathname?: string } | string };
+type RedirectState = { from?: { pathname?: string } | string; authError?: 'expired' };
 type Field = 'displayName' | 'email' | 'password';
 type FieldErrors = Partial<Record<Field, MessageKey>>;
 
@@ -38,9 +38,9 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState(() => redirectState?.authError === 'expired' ? t('expiredEmailLink') : '');
   const [busy, setBusy] = useState(false);
-  const [canResendCode, setCanResendCode] = useState(false);
+  const [canResendCode, setCanResendCode] = useState(redirectState?.authError === 'expired');
 
   if (isLoading) return <div className="px-4 py-24 text-center text-ink-3" aria-live="polite">{t('loadingSession')}</div>;
   if (session) return <Navigate to={destination} replace />;
@@ -80,7 +80,10 @@ export default function SignIn() {
         ? await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { data: { display_name: displayName.trim() } },
+          options: {
+            data: { display_name: displayName.trim() },
+            emailRedirectTo: `${window.location.origin}/signin`,
+          },
         })
         : await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
@@ -127,7 +130,11 @@ export default function SignIn() {
     setBusy(true);
     setFormError('');
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: { emailRedirectTo: `${window.location.origin}/signin` },
+      });
       if (error) {
         setFormError(describeError(error, t, 'somethingWrong'));
         return;
