@@ -5,7 +5,7 @@ import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
 const switchButton = 'min-h-[42px] rounded-[9px] border-0 bg-transparent px-1.5 py-px font-medium text-ink-2 aria-pressed:bg-surface aria-pressed:font-semibold aria-pressed:text-ink aria-pressed:shadow-[0_1px_2px_rgb(23_32_46/.12)]';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { useAuth } from '../auth';
 import { useLanguage } from '../i18n';
@@ -40,6 +40,7 @@ export default function SignIn() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [canResendCode, setCanResendCode] = useState(false);
 
   if (isLoading) return <div className="px-4 py-24 text-center text-ink-3" aria-live="polite">{t('loadingSession')}</div>;
   if (session) return <Navigate to={destination} replace />;
@@ -84,15 +85,18 @@ export default function SignIn() {
         : await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
       if (response.error) {
+        setCanResendCode(!isSignUp && response.error.code === 'email_not_confirmed');
         setFormError(describeError(response.error, t, 'somethingWrong'));
         return;
       }
       if (isSignUp && !response.data.session) {
         toast.success(t('accountCreatedToast'), t('checkInbox'));
+        setCanResendCode(true);
         setMode('sign_in');
         setPassword('');
         return;
       }
+      setCanResendCode(false);
       toast.success(isSignUp ? t('accountCreatedToast') : t('signedInToast'));
       navigate(destination, { replace: true });
     } catch (reason) {
@@ -106,6 +110,34 @@ export default function SignIn() {
     setMode(next);
     setFormError('');
     setFieldErrors({});
+    setCanResendCode(false);
+  };
+
+  const resendCode = async () => {
+    if (!supabase) {
+      setFormError(t('supabaseMissing'));
+      return;
+    }
+    if (!email.trim() || !emailPattern.test(email.trim())) {
+      setFieldErrors({ email: email.trim() ? 'fieldEmail' : 'fieldRequired' });
+      document.getElementById('signin-email')?.focus();
+      return;
+    }
+
+    setBusy(true);
+    setFormError('');
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+      if (error) {
+        setFormError(describeError(error, t, 'somethingWrong'));
+        return;
+      }
+      toast.success(t('confirmationResent'), t('checkInbox'));
+    } catch (reason) {
+      setFormError(describeError(reason, t, 'somethingWrong'));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const fieldProps = (field: Field, describedBy?: string, className?: string) => {
@@ -163,6 +195,17 @@ export default function SignIn() {
             {busy ? t('working') : isSignUp ? t('createAccount') : t('signIn')}
           </Button>
         </form>
+
+        {!isSignUp ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 text-14">
+            <Link to="/reset-password" className={ui.textLink}>{t('forgotPassword')}</Link>
+            {canResendCode ? (
+              <Button variant="ghost" size="sm" onClick={() => void resendCode()} loading={busy}>
+                {t('resendCode')}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
 
         <p className={cn(ui.fine, 'flex gap-2')}><ShieldCheck className="shrink-0 text-glaze" size={16} aria-hidden="true" />{t('authPrivacy')}</p>
       </div>

@@ -5,6 +5,7 @@ import { ProtectedRoute, useAuth } from './auth';
 import Storefront from './pages/Storefront';
 import BookDetail from './pages/BookDetail';
 import SignIn from './pages/SignIn';
+import ResetPassword from './pages/ResetPassword';
 import ListingEditor from './pages/ListingEditor';
 import { AccountLayout, AccountOverview, MyBooksPage, RequestsPage, TransactionsPage } from './pages/Account';
 import { useLanguage } from './i18n';
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/" element={<Storefront />} />
         <Route path="/books/:listingId" element={<BookDetail />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/login" element={<Navigate to="/signin" replace />} />
         <Route path="/sell" element={<ProtectedRoute><ListingEditor /></ProtectedRoute>} />
         <Route path="/account/books/:listingId/edit" element={<ProtectedRoute><ListingEditor /></ProtectedRoute>} />
