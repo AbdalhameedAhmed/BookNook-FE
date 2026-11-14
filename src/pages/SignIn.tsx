@@ -6,7 +6,8 @@ import { ui } from '../lib/ui';
 
 const switchButton = 'min-h-[42px] rounded-[9px] border-0 bg-transparent px-1.5 py-px font-medium text-ink-2 aria-pressed:bg-surface aria-pressed:font-semibold aria-pressed:text-ink aria-pressed:shadow-[0_1px_2px_rgb(23_32_46/.12)]';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabase';
+import { api } from '../api';
+import { ApiError } from '../errors';
 import { useAuth } from '../auth';
 import { useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
@@ -23,7 +24,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const benefits: MessageKey[] = ['authBenefitList', 'authBenefitRequest', 'authBenefitTrack'];
 
 export default function SignIn() {
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, signIn } = useAuth();
   const { t } = useLanguage();
   const toast = useToast();
   const location = useLocation();
@@ -53,7 +54,7 @@ export default function SignIn() {
     if (!email.trim()) errors.email = 'fieldRequired';
     else if (!emailPattern.test(email.trim())) errors.email = 'fieldEmail';
     if (!password) errors.password = 'fieldRequired';
-    else if (password.length < 6) errors.password = 'fieldPasswordShort';
+    else if (isSignUp && password.length < 8) errors.password = 'fieldPasswordShort';
     return errors;
   };
 
@@ -69,40 +70,23 @@ export default function SignIn() {
       document.getElementById(`signin-${firstInvalid}`)?.focus();
       return;
     }
-    if (!supabase) {
-      setFormError(t('supabaseMissing'));
-      return;
-    }
 
     setBusy(true);
     try {
-      const response = isSignUp
-        ? await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            data: { display_name: displayName.trim() },
-            emailRedirectTo: `${window.location.origin}/signin`,
-          },
-        })
-        : await supabase.auth.signInWithPassword({ email: email.trim(), password });
-
-      if (response.error) {
-        setCanResendCode(!isSignUp && response.error.code === 'email_not_confirmed');
-        setFormError(describeError(response.error, t, 'somethingWrong'));
-        return;
-      }
-      if (isSignUp && !response.data.session) {
+      if (isSignUp) {
+        await api.auth.signUp(email.trim(), password, displayName.trim());
         toast.success(t('accountCreatedToast'), t('checkInbox'));
         setCanResendCode(true);
         setMode('sign_in');
         setPassword('');
         return;
       }
+      signIn(await api.auth.logIn(email.trim(), password));
       setCanResendCode(false);
-      toast.success(isSignUp ? t('accountCreatedToast') : t('signedInToast'));
+      toast.success(t('signedInToast'));
       navigate(destination, { replace: true });
     } catch (reason) {
+      setCanResendCode(!isSignUp && reason instanceof ApiError && reason.detail === 'Email not confirmed');
       setFormError(describeError(reason, t, 'somethingWrong'));
     } finally {
       setBusy(false);
@@ -117,10 +101,6 @@ export default function SignIn() {
   };
 
   const resendCode = async () => {
-    if (!supabase) {
-      setFormError(t('supabaseMissing'));
-      return;
-    }
     if (!email.trim() || !emailPattern.test(email.trim())) {
       setFieldErrors({ email: email.trim() ? 'fieldEmail' : 'fieldRequired' });
       document.getElementById('signin-email')?.focus();
@@ -130,15 +110,7 @@ export default function SignIn() {
     setBusy(true);
     setFormError('');
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: email.trim(),
-        options: { emailRedirectTo: `${window.location.origin}/signin` },
-      });
-      if (error) {
-        setFormError(describeError(error, t, 'somethingWrong'));
-        return;
-      }
+      await api.auth.resendConfirmation(email.trim());
       toast.success(t('confirmationResent'), t('checkInbox'));
     } catch (reason) {
       setFormError(describeError(reason, t, 'somethingWrong'));

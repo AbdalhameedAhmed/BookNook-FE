@@ -1,21 +1,34 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Alert, FieldError } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
+import { api } from '../api';
 import { useAuth } from '../auth';
-import { describeError } from '../errors';
+import { ApiError, describeError } from '../errors';
 import { useLanguage } from '../i18n';
 import { ui } from '../lib/ui';
-import { supabase } from '../supabase';
 import { useToast } from '../components/ui/toast';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Reads the one-time token from an email link (`#token=…`). Kept in the fragment so it never reaches server logs. */
+export function readLinkToken(): string {
+  return new URLSearchParams(window.location.hash.slice(1)).get('token') ?? '';
+}
+
+/** Removes the one-time token from the address bar and browser history once it has been read. */
+export function useClearLinkToken() {
+  useEffect(() => {
+    if (window.location.hash) window.history.replaceState(window.history.state, '', window.location.pathname);
+  }, []);
+}
+
 export default function ResetPassword() {
-  const { session, isLoading } = useAuth();
+  const { signIn } = useAuth();
   const { t } = useLanguage();
   const toast = useToast();
   const navigate = useNavigate();
+  const [token, setToken] = useState(readLinkToken);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,7 +36,8 @@ export default function ResetPassword() {
   const [emailError, setEmailError] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
-  const [linkExpired, setLinkExpired] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('error_code') === 'otp_expired');
+  const [linkExpired, setLinkExpired] = useState(false);
+  useClearLinkToken();
 
   const sendResetLink = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,20 +46,10 @@ export default function ResetPassword() {
       setEmailError(t(email.trim() ? 'fieldEmail' : 'fieldRequired'));
       return;
     }
-    if (!supabase) {
-      setError(t('supabaseMissing'));
-      return;
-    }
 
     setBusy(true);
     try {
-      const { error: requestError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (requestError) {
-        setError(describeError(requestError, t, 'somethingWrong'));
-        return;
-      }
+      await api.auth.forgotPassword(email.trim());
       setLinkExpired(false);
       setSent(true);
     } catch (reason) {
@@ -58,7 +62,7 @@ export default function ResetPassword() {
   const updatePassword = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
-    if (password.length < 6) {
+    if (password.length < 8) {
       setError(t('fieldPasswordShort'));
       return;
     }
@@ -66,46 +70,42 @@ export default function ResetPassword() {
       setError(t('passwordsMismatch'));
       return;
     }
-    if (!supabase) {
-      setError(t('supabaseMissing'));
-      return;
-    }
 
     setBusy(true);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) {
-        setError(describeError(updateError, t, 'somethingWrong'));
-        return;
-      }
+      signIn(await api.auth.resetPassword(token, password));
       toast.success(t('passwordUpdated'));
       navigate('/account', { replace: true });
     } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 400) {
+        setToken('');
+        setLinkExpired(true);
+        return;
+      }
       setError(describeError(reason, t, 'somethingWrong'));
     } finally {
       setBusy(false);
     }
   };
 
-  if (isLoading) return <div className="px-4 py-24 text-center text-ink-3" aria-live="polite">{t('loadingSession')}</div>;
-
   return (
     <div className={`${ui.wrap} ${ui.page}`}>
       <section className="mx-auto grid w-full max-w-[420px] gap-[18px]" aria-labelledby="reset-password-title">
         <h1 id="reset-password-title" className={ui.pageTitle}>{t('resetTitle')}</h1>
-        <p className={ui.muted}>{session ? t('newPassword') : linkExpired ? t('expiredResetLink') : t('resetCopy')}</p>
+        <p className={ui.muted}>{token ? t('newPassword') : linkExpired ? t('expiredResetLink') : t('resetCopy')}</p>
 
         {error ? <Alert title={t('somethingWrong')} onDismiss={() => setError('')} dismissLabel={t('dismiss')}>{error}</Alert> : null}
 
-        {session ? (
+        {token ? (
           <form onSubmit={updatePassword} className={ui.stack} noValidate>
             <div className={ui.field}>
               <label className={ui.label} htmlFor="reset-password">{t('newPassword')}</label>
-              <input id="reset-password" className={ui.control} type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} required />
+              <input id="reset-password" className={ui.control} type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} maxLength={72} required aria-describedby="reset-password-hint" />
+              <span id="reset-password-hint" className={ui.hint}>{t('passwordHint')}</span>
             </div>
             <div className={ui.field}>
               <label className={ui.label} htmlFor="reset-confirm-password">{t('confirmPassword')}</label>
-              <input id="reset-confirm-password" className={ui.control} type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={6} required />
+              <input id="reset-confirm-password" className={ui.control} type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={8} maxLength={72} required />
             </div>
             <Button block size="lg" type="submit" loading={busy}>{t('updatePassword')}</Button>
           </form>
@@ -122,7 +122,7 @@ export default function ResetPassword() {
           </form>
         )}
 
-        {!session ? <Link to="/signin" className={ui.textLink}>{t('backToSignIn')}</Link> : null}
+        <Link to="/signin" className={ui.textLink}>{t('backToSignIn')}</Link>
       </section>
     </div>
   );

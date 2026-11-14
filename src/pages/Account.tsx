@@ -4,7 +4,6 @@ import { Link, Navigate, NavLink, Outlet, useNavigate, useSearchParams } from 'r
 import { api } from '../api';
 import { useAuth } from '../auth';
 import type { BookRequest, Listing, Transaction } from '../types';
-import { supabase } from '../supabase';
 import { formatCondition, formatMeetup, formatStatus, useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { describeError } from '../errors';
@@ -21,12 +20,12 @@ import { ui } from '../lib/ui';
 const attentionRow = 'flex min-h-16 items-center gap-3.5 rounded-xl border border-line bg-surface px-4 py-3 font-medium hover:border-glaze';
 
 export function AccountLayout() {
-  const { session } = useAuth();
+  const { session, signOut: endSession } = useAuth();
   const { t } = useLanguage();
   const confirm = useConfirm();
   const toast = useToast();
   const navigate = useNavigate();
-  const displayName = session?.user.user_metadata?.display_name || session?.user.email?.split('@')[0] || '';
+  const displayName = session?.user.display_name || session?.user.email.split('@')[0] || '';
   const tabs = [
     { to: '/account', label: t('overview'), end: true },
     { to: '/account/books', label: t('myBooks') },
@@ -37,11 +36,7 @@ export function AccountLayout() {
   const signOut = async () => {
     const confirmed = await confirm({ title: t('confirmSignOutTitle'), description: t('confirmSignOutCopy'), confirmLabel: t('signOut'), cancelLabel: t('cancel') });
     if (!confirmed) return;
-    const result = await supabase?.auth.signOut();
-    if (result?.error) {
-      toast.error(t('somethingWrong'), describeError(result.error, t, 'somethingWrong'));
-      return;
-    }
+    endSession();
     toast.success(t('signedOutToast'));
     navigate('/', { replace: true });
   };

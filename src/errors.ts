@@ -25,7 +25,7 @@ const knownDetails: Record<string, MessageKey> = {
   'Only active or reserved listings can be marked complete': 'errorCannotComplete',
   'Invalid login credentials': 'errorInvalidLogin',
   'Email not confirmed': 'errorEmailNotConfirmed',
-  'User already registered': 'errorAlreadyRegistered',
+  'Too many attempts. Please wait and try again.': 'errorRateLimit',
 };
 
 const statusMessages: Record<number, MessageKey> = {
@@ -41,20 +41,13 @@ const statusMessages: Record<number, MessageKey> = {
 
 /** Turns any thrown value into a short, localized message that is safe to show users. */
 export function describeError(reason: unknown, t: (key: MessageKey) => string, fallback: MessageKey): string {
-  if (reason instanceof NetworkError || (reason instanceof Error && reason.name === 'AuthRetryableFetchError')) return t('errorNetwork');
+  if (reason instanceof NetworkError) return t('errorNetwork');
   const detail = reason instanceof ApiError ? reason.detail : reason instanceof Error ? reason.message : null;
   if (detail && knownDetails[detail]) return t(knownDetails[detail]);
   if (reason instanceof ApiError) {
     if (reason.status >= 500) return t('errorServer');
     if (statusMessages[reason.status]) return t(statusMessages[reason.status]);
     if (detail) return detail;
-  }
-  // Supabase Auth messages are written for end users; other runtime errors may not be.
-  if (reason instanceof Error && reason.name.startsWith('Auth') && detail) {
-    const status = (reason as Error & { status?: number }).status;
-    if (status === 429) return t('errorRateLimit');
-    if (status && status >= 500) return t('errorServer');
-    return detail;
   }
   return t(fallback);
 }

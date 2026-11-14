@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { Compass, Inbox, Library, Moon, PlusCircle, Sun, UserRound } from 'lucide-react';
-import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { ProtectedRoute, useAuth } from './auth';
 import Storefront from './pages/Storefront';
 import BookDetail from './pages/BookDetail';
 import SignIn from './pages/SignIn';
 import ResetPassword from './pages/ResetPassword';
+import ConfirmEmail from './pages/ConfirmEmail';
 import ListingEditor from './pages/ListingEditor';
 import { AccountLayout, AccountOverview, MyBooksPage, RequestsPage, TransactionsPage } from './pages/Account';
 import { useLanguage } from './i18n';
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/books/:listingId" element={<BookDetail />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/confirm-email" element={<ConfirmEmail />} />
         <Route path="/login" element={<Navigate to="/signin" replace />} />
         <Route path="/sell" element={<ProtectedRoute><ListingEditor /></ProtectedRoute>} />
         <Route path="/account/books/:listingId/edit" element={<ProtectedRoute><ListingEditor /></ProtectedRoute>} />
@@ -51,22 +53,16 @@ function SiteLayout() {
   const { language, setLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    const authError = new URLSearchParams(location.hash.slice(1)).get('error_code');
-    if (location.pathname === '/' && authError === 'otp_expired') {
-      navigate('/signin', { replace: true, state: { authError: 'expired' } });
-      return;
-    }
     if (location.hash) {
       document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
       return;
     }
     window.scrollTo({ top: 0 });
-  }, [location.pathname, location.hash, navigate]);
+  }, [location.pathname, location.hash]);
 
-  const displayName = session?.user.user_metadata?.display_name || session?.user.email || '';
+  const displayName = session?.user.display_name || session?.user.email || '';
   const sellTarget = session ? '/sell' : '/signin';
   const sellState = session ? undefined : { from: '/sell' };
 

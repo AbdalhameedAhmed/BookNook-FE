@@ -48,3 +48,17 @@ export type ListingPayload = {
   meetup_preference: string;
   images?: string[];
 };
+export type AuthUser = {
+  id: string;
+  email: string;
+  display_name: string;
+  role: 'user' | 'moderator';
+};
+
+/** Returned by the backend when a user signs in, confirms their email, or resets their password. */
+export type SessionResponse = {
+  access_token: string;
+  token_type: 'bearer';
+  expires_in: number;
+  user: AuthUser;
+};

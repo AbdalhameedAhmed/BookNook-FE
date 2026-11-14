@@ -1,5 +1,12 @@
-import type { Listing, ListingPayload, BookRequest, Transaction } from './types';
+import type { AuthUser, Listing, ListingPayload, BookRequest, SessionResponse, Transaction } from './types';
 import { ApiError, NetworkError, readDetail } from './errors';
+
+let unauthorizedHandler: (() => void) | null = null;
+
+/** Called when an authenticated request is rejected with 401 (expired or revoked session). */
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler;
+}
 
 async function apiRequest<T>(path: string, token?: string, init: RequestInit = {}): Promise<T> {
   const API_BASE_URL = import.meta.env.VITE_API_URL
@@ -18,6 +25,7 @@ async function apiRequest<T>(path: string, token?: string, init: RequestInit = {
   }
 
   if (!response.ok) {
+    if (response.status === 401 && token) unauthorizedHandler?.();
     let detail: string | null = null;
     try { detail = readDetail(await response.json()); } catch { /* Non-JSON error body. */ }
     throw new ApiError(detail ?? `Request failed (${response.status})`, response.status, detail);
@@ -27,7 +35,24 @@ async function apiRequest<T>(path: string, token?: string, init: RequestInit = {
   return response.json() as Promise<T>;
 }
 
+const postJson = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
+
 export const api = {
+  auth: {
+    signUp: (email: string, password: string, displayName: string) =>
+      apiRequest<{ message: string }>('/api/v1/auth/signup', undefined, postJson({ email, password, display_name: displayName })),
+    logIn: (email: string, password: string) =>
+      apiRequest<SessionResponse>('/api/v1/auth/login', undefined, postJson({ email, password })),
+    confirmEmail: (token: string) =>
+      apiRequest<SessionResponse>('/api/v1/auth/confirm-email', undefined, postJson({ token })),
+    resendConfirmation: (email: string) =>
+      apiRequest<{ message: string }>('/api/v1/auth/resend-confirmation', undefined, postJson({ email })),
+    forgotPassword: (email: string) =>
+      apiRequest<{ message: string }>('/api/v1/auth/forgot-password', undefined, postJson({ email })),
+    resetPassword: (token: string, password: string) =>
+      apiRequest<SessionResponse>('/api/v1/auth/reset-password', undefined, postJson({ token, password })),
+    me: (token: string) => apiRequest<AuthUser>('/api/v1/auth/me', token),
+  },
   listings: (filters: { q?: string; listingType?: string; condition?: string; page?: number; pageSize?: number } = {}) => {
     const params = new URLSearchParams();
     if (filters.q) params.set('q', filters.q);
