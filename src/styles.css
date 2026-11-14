@@ -42,6 +42,11 @@
     --toast-error: 255 180 171;
     --toast-info: 180 197 255;
 
+    /* Logo glazes (brand board hexes; brighter in dark mode). */
+    --logo-glaze: 18 121 123;
+    --logo-cobalt: 43 74 154;
+    --logo-ochre: 201 146 31;
+
     --topbar-h: 64px;
     --gutter: 16px;
     --shadow-book: 0 1px 2px rgb(19 28 42 / 0.06), 0 12px 24px -12px rgb(19 28 42 / 0.28);
@@ -79,6 +84,10 @@
     --ochre-soft: 76 53 0;
     --pom: 255 180 171;
     --pom-soft: 110 10 14;
+
+    --logo-glaze: 76 183 179;
+    --logo-cobalt: 154 176 238;
+    --logo-ochre: 226 174 69;
 
     --toast-bg: 220 227 246;
     --toast-ink: 19 28 42;

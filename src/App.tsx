@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Compass, Inbox, Library, Moon, Plus, PlusCircle, ShieldCheck, Sun, UserRound } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { ProtectedRoute, useAuth } from './auth';
+import { RfoofWordmark } from './components/brand';
 import Storefront from './pages/Storefront';
 import BookDetail from './pages/BookDetail';
 import SignIn from './pages/SignIn';
@@ -154,22 +155,15 @@ function SiteLayout() {
   );
 }
 
-/** Three glaze spines plus the bilingual name, as in the Stitch header. */
+/** The Stitch "RFOOF" shelf wordmark, with the Arabic name رفوف and the tagline beside it. */
 function Wordmark() {
   const { t, language } = useLanguage();
   return (
     <Link to="/" className="inline-flex flex-none items-center gap-2.5 text-ink" aria-label={t('brandName')}>
-      <span className="inline-flex h-7 items-end gap-0.5" aria-hidden="true">
-        <i className="block h-[19px] w-[6px] rounded-t-[1px] bg-[#12797B]" />
-        <i className="block h-[27px] w-[8px] rounded-t-[1px] bg-[#2B4A9A]" />
-        <i className="block h-[16px] w-[6px] rounded-t-[1px] bg-[#C9921F]" />
-      </span>
-      <span className="flex flex-col" aria-hidden="true">
-        <span className="flex items-baseline gap-1.5 leading-none">
-          <span className="font-wordmark text-xl font-bold text-glaze-deep" lang="ar">رفوف</span>
-          <span className="text-title-md font-semibold text-ink" lang="en">Rfoof</span>
-        </span>
-        <span className="hidden text-label-sm text-ink-3 sm:block" lang={language}>{t('brandTagline')}</span>
+      <RfoofWordmark className="h-6 w-auto sm:h-7" />
+      <span className="hidden flex-col border-s border-line-strong/60 ps-2.5 sm:flex" aria-hidden="true">
+        <span className="font-wordmark text-lg font-bold leading-none text-glaze-deep" lang="ar">رفوف</span>
+        <span className="mt-0.5 text-label-sm text-ink-3" lang={language}>{t('brandTagline')}</span>
       </span>
     </Link>
   );
