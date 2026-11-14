@@ -4,7 +4,8 @@ import { AlertTriangle, HelpCircle, X } from 'lucide-react';
 import { Button } from './button';
 import { cn } from '../../lib/utils';
 
-export const dialogFooter = 'mt-2 flex flex-wrap justify-end gap-2.5';
+/** Buttons share the row equally (Stitch's two-up dialog actions) and wrap on narrow screens. */
+export const dialogFooter = 'mt-3 flex flex-wrap gap-2.5 [&>*]:min-h-12 [&>*]:flex-1 [&>*]:basis-[9rem]';
 
 type DialogProps = {
   open: boolean;
@@ -34,19 +35,21 @@ export function Dialog({ open, onClose, title, description, icon, tone = 'defaul
   return (
     <dialog
       ref={ref}
-      className="max-h-[calc(100%-32px)] w-[min(460px,calc(100%-32px))] border-0 bg-transparent p-0 text-ink backdrop:bg-[rgb(14_21_30/.55)]"
+      className="max-h-[calc(100%-32px)] w-[min(440px,calc(100%-32px))] overflow-y-auto border-0 bg-transparent p-0 text-ink backdrop:bg-ink/60 backdrop:backdrop-blur-sm max-xs:mb-0 max-xs:max-h-[calc(100%-48px)] max-xs:w-full max-xs:max-w-full"
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => { event.preventDefault(); onClose(); }}
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
       {open ? (
-        <div className="relative grid animate-rise gap-3 rounded-2xl bg-surface p-6">
-          <Button variant="ghost" size="icon" className="absolute end-2.5 top-2.5" onClick={onClose} aria-label={closeLabel}><X size={18} /></Button>
-          {icon ? <span className={cn('grid h-11 w-11 place-items-center rounded-full', tone === 'danger' ? 'bg-pom-soft text-pom' : 'bg-glaze-soft text-glaze')} aria-hidden="true">{icon}</span> : null}
-          <h2 id={titleId} className="pe-8 font-book text-21 font-semibold">{title}</h2>
-          {description ? <div id={descriptionId} className="text-ink-2">{description}</div> : null}
-          {children}
+        <div className="relative grid animate-rise gap-2 rounded-card bg-surface p-6 shadow-deck max-xs:rounded-b-none max-xs:rounded-t-[1.5rem] max-xs:pb-[calc(24px+env(safe-area-inset-bottom))]">
+          {/* Grab handle: the dialog docks to the bottom like a sheet on small phones. */}
+          <span className="mx-auto mb-2 h-1 w-10 rounded-full bg-line-strong xs:hidden" aria-hidden="true" />
+          <Button variant="ghost" size="icon" className="absolute end-4 top-4 rounded-full bg-sunk max-xs:top-7" onClick={onClose} aria-label={closeLabel}><X size={18} /></Button>
+          {icon ? <span className={cn('mb-2 grid h-12 w-12 place-items-center rounded-full', tone === 'danger' ? 'bg-pom-soft text-pom' : 'bg-sunk-2 text-glaze')} aria-hidden="true">{icon}</span> : null}
+          <h2 id={titleId} className="pe-12 font-book text-headline-sm font-semibold text-ink ar:leading-[1.5]">{title}</h2>
+          {description ? <div id={descriptionId} className="text-body-md text-ink-2">{description}</div> : null}
+          {children ? <div className="mt-2">{children}</div> : null}
           {footer ? <div className={dialogFooter}>{footer}</div> : null}
         </div>
       ) : null}
@@ -95,7 +98,7 @@ export function ConfirmProvider({ children, closeLabel }: { children: ReactNode;
         closeLabel={closeLabel}
         footer={options ? (
           <>
-            <Button variant="secondary" onClick={() => settle(false)} autoFocus>{options.cancelLabel}</Button>
+            <Button variant="secondary" className="border-transparent bg-sunk-2 [&:not(:disabled):hover]:bg-sunk-3" onClick={() => settle(false)} autoFocus>{options.cancelLabel}</Button>
             <Button variant={options.tone === 'danger' ? 'danger' : 'primary'} onClick={() => settle(true)}>{options.confirmLabel}</Button>
           </>
         ) : null}

@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 export type Theme = 'light' | 'dark';
 
 const storageKey = 'rfoof-theme';
-const themeColors: Record<Theme, string> = { light: '#F4F6F3', dark: '#121A24' };
+const themeColors: Record<Theme, string> = { light: '#F9F9FF', dark: '#10141E' };
 const darkQuery = '(prefers-color-scheme: dark)';
 
 type ThemeContextValue = { theme: Theme; toggleTheme: () => void };

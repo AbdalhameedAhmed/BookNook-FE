@@ -1,6 +1,7 @@
+import { useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Plus } from 'lucide-react';
 import type { Listing, ListingType } from '../types';
 import { formatStatus, useLanguage } from '../i18n';
 import { bookLook, listingImage, listingTypeLabel, priceLabel } from '../lib/listing';
@@ -75,15 +76,28 @@ export function BookCover({ listing, photo, className, alt = '', size = 'md' }: 
   );
 }
 
-const typeTones: Record<ListingType, string> = {
-  sale: 'bg-cobalt-soft text-cobalt',
-  exchange: 'bg-olive-soft text-olive',
+/** Listing-type colours from the Stitch design: sale = cobalt, exchange = turquoise, free = ochre. */
+export const typeTones: Record<ListingType, string> = {
+  sale: 'bg-cobalt-soft text-cobalt-ink',
+  exchange: 'bg-glaze-fixed text-glaze-deep',
   free: 'bg-ochre-soft text-ochre-ink',
+};
+/** Solid versions, for badges laid over a photo. */
+const typeSolid: Record<ListingType, string> = {
+  sale: 'bg-cobalt text-white dark:text-paper',
+  exchange: 'bg-glaze text-on-glaze',
+  free: 'bg-ochre text-white',
+};
+/** The coloured edge on shelf tiles. */
+export const typeEdge: Record<ListingType, string> = {
+  sale: 'bg-cobalt',
+  exchange: 'bg-glaze',
+  free: 'bg-ochre',
 };
 
 export function TypeTag({ type, className }: { type: ListingType; className?: string }) {
   const { t } = useLanguage();
-  return <span className={cn('inline-flex items-center whitespace-nowrap rounded-full px-[9px] py-0.5 text-xs font-semibold leading-normal', typeTones[type], className)}>{listingTypeLabel(type, t)}</span>;
+  return <span className={cn('inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-label-md font-semibold', typeTones[type], className)}>{listingTypeLabel(type, t)}</span>;
 }
 
 const statusDots: Record<string, string> = {
@@ -96,129 +110,188 @@ const statusDots: Record<string, string> = {
 export function StatusPill({ status }: { status: string }) {
   const { t } = useLanguage();
   return (
-    <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap text-13 font-medium capitalize text-ink-2 before:h-2 before:w-2 before:rounded-full', statusDots[status] ?? 'before:bg-ink-3')}>
+    <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-sunk-2 px-2.5 py-0.5 text-label-md font-semibold capitalize text-ink-2 before:h-1.5 before:w-1.5 before:rounded-full', statusDots[status] ?? 'before:bg-ink-3')}>
       {formatStatus(status, t)}
     </span>
   );
 }
 
-/** Title, author, price and place under a cover, for the catalogue and the listing preview. */
-export function TileBody({ title, author, price, type, area, condition, linked = false }: {
-  title: string;
-  author: string;
-  price: ReactNode;
-  type: ListingType;
-  area: string;
-  condition: string;
-  linked?: boolean;
+/**
+ * The catalogue card from the Stitch design: photo on top with the price/type and condition
+ * badges laid over it, then title, author, area and who listed it.
+ * Used by the storefront grid and the listing editor's preview.
+ */
+export function BookCard({ listing, price, conditionLabel, authorFallback, sellerLabel, to, photo }: {
+  listing: CoverListing & Pick<Listing, 'listing_type' | 'area'> & { seller_name?: string | null };
+  price: string;
+  conditionLabel: string;
+  authorFallback: string;
+  /** e.g. "Listed by Mona"; omitted in the editor preview. */
+  sellerLabel?: string;
+  /** Makes the whole card a link to the listing. */
+  to?: string;
+  photo?: string | null;
 }) {
-  return (
-    <span className="flex min-w-0 flex-col gap-[3px]">
-      <span className={cn('line-clamp-2 font-book text-17 font-semibold leading-[1.25]', linked && 'group-hover:underline group-hover:decoration-1 group-hover:underline-offset-[3px]')}>{title}</span>
-      <span className="truncate text-sm text-ink-3">{author}</span>
-      <span className="mt-1 flex flex-wrap items-center gap-2">
-        <strong className="font-semibold">{price}</strong>
-        <TypeTag type={type} />
+  const body = (
+    <>
+      <span className="relative block aspect-[3/4] w-full overflow-hidden bg-sunk">
+        <BookCover listing={listing} photo={photo} className="h-full rounded-none shadow-none after:hidden [&>img]:transition-transform [&>img]:duration-300 group-hover:[&>img]:scale-105" />
+        <span className="absolute start-3 top-3 flex flex-col items-start gap-1">
+          <span className={cn('rounded-full px-2.5 py-1 text-label-sm font-bold shadow-sm', typeSolid[listing.listing_type])}>{price}</span>
+          <span className="rounded-md bg-surface/90 px-2 py-0.5 text-[11px] font-medium text-ink backdrop-blur-sm">{conditionLabel}</span>
+        </span>
       </span>
-      <span className="flex min-w-0 items-center gap-1 text-13 text-ink-3">
-        <MapPin className="shrink-0" size={14} aria-hidden="true" />
-        <span className="min-w-0 truncate">{area}</span>
-        <span aria-hidden="true" className={cn(ui.sep, 'shrink-0')} />
-        {condition}
+      <span className="flex flex-1 flex-col justify-between p-4">
+        <span className="block min-w-0">
+          <span dir="auto" className={cn('line-clamp-1 ltr:text-left rtl:text-right text-title-lg font-bold text-ink transition-colors', to && 'group-hover:text-glaze-deep')}>{listing.title}</span>
+          <span dir="auto" className="mt-0.5 block truncate ltr:text-left rtl:text-right text-body-sm font-medium text-ink-2">{listing.author || authorFallback}</span>
+          <span className="mt-1 flex min-w-0 items-center gap-1 text-ink-2">
+            <MapPin className="shrink-0 text-glaze-deep" size={15} aria-hidden="true" />
+            <span dir="auto" className="min-w-0 truncate text-label-sm">{listing.area}</span>
+          </span>
+        </span>
+        {sellerLabel && listing.seller_name ? (
+          <span className="mt-2 flex items-center gap-2 border-t border-line-strong/40 pt-3">
+            <span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-cobalt-soft text-label-sm font-bold text-cobalt-ink" aria-hidden="true">{listing.seller_name.slice(0, 1).toUpperCase()}</span>
+            <span className="min-w-0 truncate text-label-sm text-ink-2">{sellerLabel} {listing.seller_name}</span>
+          </span>
+        ) : null}
+      </span>
+    </>
+  );
+  const card = 'group flex h-full flex-col overflow-hidden rounded-card bg-surface shadow-card transition-shadow duration-300';
+  return to
+    ? <Link to={to} className={cn(card, 'hover:shadow-card-hover')}>{body}</Link>
+    : <div className={card}>{body}</div>;
+}
+
+/** Placeholder with a card's shape, for loading states. */
+export function BookCardSkeleton() {
+  return (
+    <span className="flex flex-col overflow-hidden rounded-card bg-surface shadow-card">
+      <span className={cn(ui.skeleton, 'aspect-[3/4] w-full rounded-none')} />
+      <span className="grid gap-2 p-4">
+        <span className={cn(ui.skeleton, 'h-4 w-4/5')} />
+        <span className={cn(ui.skeleton, 'h-3.5 w-1/2')} />
+        <span className={cn(ui.skeleton, 'h-3 w-2/5')} />
       </span>
     </span>
   );
 }
 
-/* ---------- The shelf ---------- */
+/* ---------- The ledge: newest listings standing on a shelf rail ---------- */
 
-const shelfFrame = 'relative after:pointer-events-none after:absolute after:inset-x-[2%] after:-bottom-3 after:h-3 after:bg-[linear-gradient(to_bottom,rgb(23_32_46/.25),transparent)]';
-const shelfRow = 'm-0 flex h-[190px] items-end gap-[3px] overflow-x-auto overflow-y-hidden border-b-[12px] border-ledge px-1.5 [mask-image:linear-gradient(to_right,#000_88%,transparent)] [scrollbar-width:none] md:h-[240px] md:gap-1 rtl:[mask-image:linear-gradient(to_left,#000_88%,transparent)] [&::-webkit-scrollbar]:hidden';
-const spineSlot = 'flex h-full flex-none items-end motion-safe:animate-shelve [animation-delay:calc(min(var(--i),14)*28ms)]';
-const spineBase = 'flex h-[var(--h)] w-[var(--w)] min-w-[34px] flex-none items-center justify-center rounded-t-[3px] bg-[color:var(--book-bg)] py-2.5 text-[color:var(--book-ink,#F4F6F3)] shadow-[inset_3px_0_0_rgb(255_255_255/.16),inset_-4px_0_0_rgb(0_0_0/.16)] transition-transform duration-[180ms] ease-out';
-const spineLink = 'hover:-translate-y-3 focus-visible:-translate-y-3 focus-visible:outline-offset-[3px]';
-const spineBands = [
-  'bg-[linear-gradient(to_bottom,transparent_8%,rgb(255_255_255/.22)_8%,rgb(255_255_255/.22)_9.5%,transparent_9.5%,transparent_90.5%,rgb(255_255_255/.22)_90.5%,rgb(255_255_255/.22)_92%,transparent_92%)]',
-  'bg-[linear-gradient(to_bottom,transparent_6%,rgb(0_0_0/.16)_6%,rgb(0_0_0/.16)_16%,transparent_16%)]',
-  '',
-];
-const spineTitle = 'max-h-full rotate-180 overflow-hidden text-ellipsis whitespace-nowrap font-book text-13 font-semibold leading-[1.1] [writing-mode:vertical-rl]';
-const spineSize = (width: number | string, height: number) => ({ '--w': typeof width === 'number' ? `${width}px` : width, '--h': `${height}%` });
+const ledgeRow = 'relative flex items-end gap-4 overflow-x-auto scroll-smooth px-2 pt-6 [scrollbar-width:none] md:gap-5 [&::-webkit-scrollbar]:hidden';
+const ledgeRail = (
+  <>
+    <div className="h-2 w-full rounded-full bg-ledge shadow-[0_8px_16px_-4px_rgb(19_28_42/.18)]" />
+    <div className="mt-0.5 h-1 w-full rounded-full bg-glaze-deep/20" />
+  </>
+);
+/** Tile heights vary like real books; derived from the id so they stay stable. */
+const tileHeights = ['h-36', 'h-40', 'h-44', 'h-48', 'h-[9.5rem]', 'h-[10.5rem]'];
+const tileHeight = (id: string) => tileHeights[[...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % tileHeights.length];
 
-const minSpines = 28;
-
-/** A row of real listings drawn as spines standing on a shelf. */
-export function Shelf({ listings, loading, label, emptyAction, addLink }: {
+/** A row of real listings drawn as covers standing on a ledge, with scroll buttons. */
+export function Shelf({ listings, loading, label, title, subtitle, emptyAction, addLink }: {
   listings: Listing[];
   loading: boolean;
   label: string;
+  title?: ReactNode;
+  subtitle?: ReactNode;
   emptyAction?: ReactNode;
-  /** Shown as an outlined spine after the real books when the shelf has room. */
+  /** Shown as an outlined tile after the real books. */
   addLink?: { to: string; state?: unknown; label: string };
 }) {
   const { t } = useLanguage();
-  if (loading) {
-    return (
-      <div className={shelfFrame} aria-busy="true" aria-label={t('loadingBooks')}>
-        <div className={shelfRow}>
-          {Array.from({ length: 14 }).map((_, index) => <span key={index} className={cn(spineBase, 'animate-pulse-soft bg-line shadow-none')} style={spineSize(40 + (index * 7) % 18, 78 + (index * 11) % 20) as CSSProperties} />)}
-        </div>
-      </div>
-    );
-  }
-  if (listings.length === 0) {
-    return (
-      <div className={shelfFrame}>
-        <div className={cn(shelfRow, 'items-center justify-center [mask-image:none]')}>{emptyAction}</div>
-      </div>
-    );
-  }
+  const rowRef = useRef<HTMLUListElement>(null);
+  const scroll = (direction: 1 | -1) => {
+    const row = rowRef.current;
+    if (!row) return;
+    const rtl = getComputedStyle(row).direction === 'rtl';
+    row.scrollBy({ left: direction * (rtl ? -1 : 1) * row.clientWidth * 0.8, behavior: 'smooth' });
+  };
+  const roundButton = 'grid h-9 w-9 place-items-center rounded-full bg-surface text-ink-2 shadow-sm transition-colors hover:bg-sunk-3 hover:text-ink';
+
   return (
-    <nav className={shelfFrame} aria-label={label}>
-      <ul className={shelfRow}>
-        {listings.map((listing, index) => {
-          const look = bookLook(listing);
-          return (
-            <li key={listing.id} className={spineSlot} style={{ '--i': index } as CSSProperties}>
+    <section aria-label={label}>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="flex flex-wrap items-baseline gap-x-2">
+          {title ? <span className="text-title-md font-semibold text-ink">{title}</span> : null}
+          {subtitle ? <span className="text-label-sm text-ink-2">{subtitle}</span> : null}
+        </p>
+        {!loading && listings.length > 0 ? (
+          <span className="flex gap-1.5">
+            <button type="button" className={roundButton} onClick={() => scroll(-1)} aria-label={t('scrollBack')}><ChevronLeft className={ui.flipRtl} size={18} aria-hidden="true" /></button>
+            <button type="button" className={roundButton} onClick={() => scroll(1)} aria-label={t('scrollForward')}><ChevronRight className={ui.flipRtl} size={18} aria-hidden="true" /></button>
+          </span>
+        ) : null}
+      </div>
+      {loading ? (
+        <div className={ledgeRow} aria-busy="true" aria-label={t('loadingBooks')}>
+          {Array.from({ length: 8 }).map((_, index) => <span key={index} className={cn(ui.skeleton, 'w-28 flex-none rounded-b-none', tileHeights[index % tileHeights.length])} />)}
+        </div>
+      ) : listings.length === 0 ? (
+        <div className="flex h-44 items-center justify-center">{emptyAction}</div>
+      ) : (
+        <ul ref={rowRef} className={ledgeRow}>
+          {listings.map((listing, index) => (
+            <li key={listing.id} className="flex-none motion-safe:animate-shelve" style={{ animationDelay: `${Math.min(index, 14) * 28}ms` }}>
               <Link
                 to={`/books/${listing.id}`}
-                className={cn(spineBase, spineLink, spineBands[look.band])}
-                style={{ '--book-bg': look.bg, '--book-ink': look.ink, ...spineSize(look.spineWidth, look.spineHeight) } as CSSProperties}
+                className={cn(
+                  'relative flex w-28 flex-col justify-between overflow-hidden rounded-t-sm bg-gradient-to-br from-surface to-sunk-3 p-2.5 ps-3.5 shadow-md transition-transform duration-200 hover:-translate-y-2 focus-visible:-translate-y-2',
+                  tileHeight(listing.id),
+                )}
                 aria-label={`${listing.title}, ${priceLabel(listing, t)}`}
               >
-                <span className={spineTitle} aria-hidden="true">{listing.title}</span>
+                <span className={cn('absolute inset-y-0 start-0 w-1.5', typeEdge[listing.listing_type])} aria-hidden="true" />
+                <span className="flex justify-end" aria-hidden="true">
+                  <span className={cn('max-w-full truncate rounded-full px-1.5 py-0.5 text-label-sm font-bold', typeTones[listing.listing_type])}>{priceLabel(listing, t)}</span>
+                </span>
+                <span className="block min-w-0" aria-hidden="true">
+                  <span dir="auto" className="line-clamp-3 ltr:text-left rtl:text-right text-[13px] font-bold leading-tight text-ink">{listing.title}</span>
+                  {listing.author ? <span dir="auto" className="mt-0.5 block truncate ltr:text-left rtl:text-right text-[11px] text-ink-2">{listing.author}</span> : null}
+                </span>
               </Link>
             </li>
-          );
-        })}
-        {addLink && listings.length < minSpines ? (
-          <li className={spineSlot} style={{ '--i': listings.length } as CSSProperties}>
-            <Link to={addLink.to} state={addLink.state} className={cn(spineBase, spineLink, 'border-2 border-b-0 border-dashed border-glaze bg-transparent text-glaze shadow-none')} style={spineSize('46px', 88) as CSSProperties}>
-              <span className={cn(spineTitle, 'font-ui')}>+ {addLink.label}</span>
-            </Link>
-          </li>
-        ) : null}
-        {/* Blank, muted spines keep a young shelf from looking abandoned. Decoration only. */}
-        {Array.from({ length: Math.max(0, minSpines - listings.length - (addLink ? 1 : 0)) }).map((_, index) => (
-          <li key={`blank-${index}`} className={spineSlot} aria-hidden="true" style={{ '--i': listings.length + index } as CSSProperties}>
-            <span className={cn(spineBase, 'bg-line opacity-70 shadow-[inset_3px_0_0_rgb(255_255_255/.08),inset_-4px_0_0_rgb(0_0_0/.06)]')} style={spineSize(36 + (index * 13) % 22, 74 + (index * 17) % 24) as CSSProperties} />
-          </li>
-        ))}
-      </ul>
-    </nav>
+          ))}
+          {addLink ? (
+            <li className="flex-none">
+              <Link to={addLink.to} state={addLink.state} className="flex h-40 w-28 flex-col items-center justify-center gap-2 rounded-t-sm border-2 border-b-0 border-dashed border-glaze/60 p-2.5 text-center text-label-md font-semibold text-glaze-deep transition-transform duration-200 hover:-translate-y-2">
+                <Plus size={22} aria-hidden="true" />
+                {addLink.label}
+              </Link>
+            </li>
+          ) : null}
+        </ul>
+      )}
+      {ledgeRail}
+    </section>
   );
 }
 
-/** Decorative spines without content, used where the shelf is brand texture only. */
+/** Decorative covers on a ledge, used where the shelf is brand texture only. */
 export function DecorativeShelf() {
-  const widths = [44, 30, 52, 38, 46, 34, 58, 40, 36, 50, 42];
-  const heights = [88, 74, 96, 82, 90, 70, 94, 86, 78, 92, 84];
-  const colors = ['#12797B', '#C9921F', '#2B4A9A', '#D9C79E', '#5A6E2C', '#6B3A5B', '#8CC7C0', '#1E4E6B', '#C9921F', '#12797B', '#2B4A9A'];
+  const tiles: Array<{ edge: string; h: string }> = [
+    { edge: 'bg-cobalt', h: 'h-28' }, { edge: 'bg-ochre', h: 'h-32' }, { edge: 'bg-glaze', h: 'h-24' },
+    { edge: 'bg-cobalt', h: 'h-36' }, { edge: 'bg-glaze', h: 'h-[6.5rem]' }, { edge: 'bg-ochre', h: 'h-[7.5rem]' },
+  ];
   return (
-    <div className={shelfFrame} aria-hidden="true">
-      <div className={cn(shelfRow, 'h-[150px] overflow-hidden [mask-image:none] md:h-[150px]')}>
-        {widths.map((width, index) => <span key={index} className={cn(spineBase, spineBands[index % 3])} style={{ '--book-bg': colors[index], ...spineSize(width, heights[index]) } as CSSProperties} />)}
+    <div aria-hidden="true">
+      <div className="flex items-end gap-3 overflow-hidden px-2 pt-4">
+        {tiles.map((tile, index) => (
+          <span key={index} className={cn('relative w-16 flex-none overflow-hidden rounded-t-sm bg-gradient-to-br from-surface to-sunk-3 shadow-md', tile.h)}>
+            <span className={cn('absolute inset-y-0 start-0 w-1.5', tile.edge)} />
+            <span className="absolute bottom-3 end-2 start-3.5 grid gap-1">
+              <span className="h-1.5 w-4/5 rounded-full bg-ink/20" />
+              <span className="h-1 w-1/2 rounded-full bg-ink/10" />
+            </span>
+          </span>
+        ))}
       </div>
+      <div className="h-2 w-full rounded-full bg-ledge" />
+      <div className="mt-0.5 h-1 w-full rounded-full bg-glaze-deep/20" />
     </div>
   );
 }

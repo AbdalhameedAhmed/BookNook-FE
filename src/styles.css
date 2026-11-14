@@ -1,5 +1,5 @@
-/* Rfoof: "Fayoum glaze shelf".
-   Paper and ink, with the glazes of Tunis-village pottery. All styling lives in Tailwind
+/* Rfoof: "Fayoum glaze shelf", as refined in the Stitch design.
+   Cool paper and ink, with the glazes of Tunis-village pottery (turquoise, cobalt, ochre). All styling lives in Tailwind
    utilities; this file only holds the design tokens and a few document-level base rules.
    Colour tokens are RGB channels so Tailwind opacity modifiers (e.g. `border-pom/30`) work. */
 
@@ -9,80 +9,95 @@
 
 @layer base {
   :root {
-    --paper: 244 246 243;
-    --surface: 255 255 255;
-    --sunk: 232 236 232;
-    --line: 214 221 215;
-    --line-strong: 180 191 183;
-    --ink: 23 32 46;
-    --ink-2: 67 80 97;
-    --ink-3: 95 107 120;
-    --ledge: 23 32 46;
+    /* Tonal palette from the Stitch "Rfoof Used Books Marketplace" design (Material-style roles). */
+    --paper: 249 249 255;        /* background #F9F9FF */
+    --surface: 255 255 255;      /* surface-container-lowest: cards, inputs */
+    --sunk: 240 243 255;         /* surface-container-low: bands, input wells */
+    --sunk-2: 231 238 255;       /* surface-container */
+    --sunk-3: 223 232 252;       /* surface-container-high */
+    --line: 218 227 246;         /* surface-variant */
+    --line-strong: 189 201 200;  /* outline-variant */
+    --ink: 19 28 42;             /* on-surface */
+    --ink-2: 62 73 73;           /* on-surface-variant */
+    --ink-3: 94 104 104;         /* outline, darkened for AA text contrast */
+    --ledge: 19 28 42;
 
-    --glaze: 18 121 123;
-    --glaze-deep: 12 94 96;
-    --glaze-soft: 220 238 236;
+    --glaze: 18 121 123;         /* primary-container #12797B: buttons, active nav */
+    --glaze-deep: 0 95 96;       /* primary #005F60: hover, text accents */
+    --glaze-soft: 205 243 243;
+    --glaze-fixed: 155 241 243;  /* primary-fixed: exchange tags */
     --on-glaze: 255 255 255;
-    --cobalt: 43 74 154;
-    --cobalt-soft: 225 231 245;
-    --olive: 85 106 39;
-    --olive-soft: 232 238 218;
-    --ochre: 201 146 31;
-    --ochre-ink: 122 83 6;
-    --ochre-soft: 247 236 210;
-    --pom: 178 56 45;
-    --pom-soft: 248 226 223;
+    --cobalt: 61 90 171;         /* secondary: sale */
+    --cobalt-ink: 33 66 145;
+    --cobalt-soft: 219 225 255;
+    --ochre: 144 101 0;          /* tertiary-container: free */
+    --ochre-ink: 95 65 0;
+    --ochre-soft: 255 222 170;
+    --pom: 186 26 26;            /* error */
+    --pom-soft: 255 218 214;
 
-    --toast-bg: 23 32 46;
-    --toast-ink: 244 246 243;
-    --toast-success: 111 201 196;
-    --toast-error: 242 154 144;
-    --toast-info: 166 185 240;
+    --toast-bg: 40 49 63;        /* inverse-surface */
+    --toast-ink: 235 241 255;
+    --toast-success: 127 212 214;
+    --toast-error: 255 180 171;
+    --toast-info: 180 197 255;
 
-    --topbar-h: 60px;
+    --topbar-h: 64px;
     --gutter: 16px;
-    --shadow-book: 0 1px 0 rgb(23 32 46 / 0.06), 0 12px 20px -14px rgb(23 32 46 / 0.5);
+    --shadow-book: 0 1px 2px rgb(19 28 42 / 0.06), 0 12px 24px -12px rgb(19 28 42 / 0.28);
+    --shadow-card: 0 1px 3px rgb(19 28 42 / 0.06), 0 1px 2px rgb(19 28 42 / 0.04);
+    --shadow-card-hover: 0 20px 32px -12px rgb(19 28 42 / 0.18), 0 4px 8px -4px rgb(19 28 42 / 0.08);
+    --shadow-deck: 0 12px 32px -8px rgb(19 28 42 / 0.10), 0 2px 6px rgb(19 28 42 / 0.04);
     color-scheme: light;
   }
 
   /* The theme is set on <html data-theme> by the inline script in index.html and by
      src/theme.tsx: the reader's saved choice, or the device setting when they haven't chosen. */
   :root[data-theme='dark'] {
-    --paper: 18 26 36;
-    --surface: 26 36 49;
-    --sunk: 14 21 30;
-    --line: 42 55 71;
-    --line-strong: 60 75 94;
-    --ink: 233 237 234;
-    --ink-2: 185 194 203;
-    --ink-3: 142 153 165;
-    --ledge: 7 11 16;
+    --paper: 16 20 30;
+    --surface: 25 31 44;
+    --sunk: 20 26 38;
+    --sunk-2: 31 38 53;
+    --sunk-3: 39 47 64;
+    --line: 45 55 72;
+    --line-strong: 70 82 96;
+    --ink: 220 227 246;
+    --ink-2: 189 201 200;
+    --ink-3: 150 162 162;
+    --ledge: 5 8 14;
 
-    --glaze: 76 183 179;
-    --glaze-deep: 115 204 200;
-    --glaze-soft: 22 58 60;
-    --on-glaze: 11 26 27;
-    --cobalt: 154 176 238;
-    --cobalt-soft: 31 44 77;
-    --olive: 178 199 122;
-    --olive-soft: 38 48 24;
-    --ochre: 226 174 69;
-    --ochre-ink: 232 188 98;
-    --ochre-soft: 58 44 16;
-    --pom: 240 133 122;
-    --pom-soft: 62 29 26;
+    --glaze: 127 212 214;
+    --glaze-deep: 155 241 243;
+    --glaze-soft: 0 60 62;
+    --glaze-fixed: 0 79 81;
+    --on-glaze: 0 32 32;
+    --cobalt: 180 197 255;
+    --cobalt-ink: 219 225 255;
+    --cobalt-soft: 33 52 110;
+    --ochre: 249 188 73;
+    --ochre-ink: 255 222 170;
+    --ochre-soft: 76 53 0;
+    --pom: 255 180 171;
+    --pom-soft: 110 10 14;
 
-    --toast-bg: 233 237 234;
-    --toast-ink: 23 32 46;
-    --toast-success: 18 121 123;
-    --toast-error: 178 56 45;
-    --toast-info: 43 74 154;
+    --toast-bg: 220 227 246;
+    --toast-ink: 19 28 42;
+    --toast-success: 0 105 107;
+    --toast-error: 186 26 26;
+    --toast-info: 61 90 171;
     --shadow-book: 0 1px 0 rgb(0 0 0 / 0.3), 0 14px 22px -14px rgb(0 0 0 / 0.8);
+    --shadow-card: 0 1px 3px rgb(0 0 0 / 0.4);
+    --shadow-card-hover: 0 20px 32px -12px rgb(0 0 0 / 0.6);
+    --shadow-deck: 0 12px 32px -8px rgb(0 0 0 / 0.5);
     color-scheme: dark;
   }
 
   @media (min-width: 640px) {
     :root { --gutter: 24px; }
+  }
+
+  @media (min-width: 900px) {
+    :root { --gutter: 40px; --topbar-h: 80px; }
   }
 
   html {

@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { ArrowRight, AtSign, BookPlus, Eye, EyeOff, Handshake, Lock, MessageSquareText, ShieldCheck, UserRound } from 'lucide-react';
 import { DecorativeShelf } from '../components/book';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
-const switchButton = 'min-h-[42px] rounded-[9px] border-0 bg-transparent px-1.5 py-px font-medium text-ink-2 aria-pressed:bg-surface aria-pressed:font-semibold aria-pressed:text-ink aria-pressed:shadow-[0_1px_2px_rgb(23_32_46/.12)]';
+const switchButton = 'min-h-11 flex-1 rounded-ctl border-0 bg-transparent px-2 py-2 text-center text-label-lg font-semibold text-ink-2 transition-colors duration-200 hover:text-ink aria-pressed:bg-glaze aria-pressed:text-on-glaze aria-pressed:shadow-sm';
+const fieldLabel = 'text-label-md font-semibold text-ink';
+const fieldIcon = 'pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-ink-3';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { ApiError } from '../errors';
@@ -21,7 +24,11 @@ type Field = 'displayName' | 'email' | 'password';
 type FieldErrors = Partial<Record<Field, MessageKey>>;
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const benefits: MessageKey[] = ['authBenefitList', 'authBenefitRequest', 'authBenefitTrack'];
+const benefits: Array<{ title: MessageKey; copy: MessageKey; Icon: LucideIcon }> = [
+  { title: 'authBenefitList', copy: 'authBenefitListCopy', Icon: BookPlus },
+  { title: 'authBenefitRequest', copy: 'authBenefitRequestCopy', Icon: MessageSquareText },
+  { title: 'authBenefitTrack', copy: 'authBenefitTrackCopy', Icon: Handshake },
+];
 
 export default function SignIn() {
   const { session, isLoading, signIn } = useAuth();
@@ -123,19 +130,22 @@ export default function SignIn() {
     const ids = [fieldErrors[field] ? `signin-${field}-error` : null, describedBy].filter(Boolean).join(' ');
     return {
       id: `signin-${field}`,
-      className: cn(ui.control, className),
+      className: cn(ui.control, 'rounded-ctl border-transparent bg-surface ps-11', className),
       'aria-invalid': fieldErrors[field] ? true : undefined,
       'aria-describedby': ids || undefined,
     };
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-[1080px] gap-12 px-[var(--gutter)] pb-[72px] pt-8 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-20 lg:pt-16">
-      <div className="grid w-full max-w-[420px] gap-[18px]">
-        <h1 className={ui.pageTitle}>{isSignUp ? t('signUpTitle') : t('signInTitle')}</h1>
-        <p className={ui.muted}>{isSignUp ? t('signUpCopy') : t('signInCopy')}</p>
+    <div className="mx-auto grid w-full max-w-[1080px] items-start gap-8 px-[var(--gutter)] pb-[72px] pt-6 md:pt-10 lg:grid-cols-2 lg:gap-10 lg:pb-24">
+      <div className="grid gap-6 rounded-card bg-sunk p-5 shadow-sm sm:p-6">
+        <div className="grid gap-1.5">
+          <p className={ui.eyebrow}>{t('authFormEyebrow')}</p>
+          <h1 className="font-book text-headline-md font-semibold text-ink ar:leading-[1.5] ar:tracking-normal">{isSignUp ? t('signUpTitle') : t('signInTitle')}</h1>
+          <p className="text-body-md text-ink-2">{isSignUp ? t('signUpCopy') : t('signInCopy')}</p>
+        </div>
 
-        <div className="grid grid-cols-[1fr_1fr] gap-1 rounded-xl bg-sunk p-1" role="group" aria-label={t('signIn')}>
+        <div className="flex gap-1 rounded-xl bg-sunk-3 p-1" role="group" aria-label={t('authModeLabel')}>
           <button type="button" className={switchButton} aria-pressed={!isSignUp} onClick={() => switchMode('sign_in')}>{t('signIn')}</button>
           <button type="button" className={switchButton} aria-pressed={isSignUp} onClick={() => switchMode('sign_up')}>{t('createAccount')}</button>
         </div>
@@ -149,51 +159,78 @@ export default function SignIn() {
         <form onSubmit={submit} className={ui.stack} noValidate>
           {isSignUp ? (
             <div className={ui.field}>
-              <label className={ui.label} htmlFor="signin-displayName">{t('yourName')}</label>
-              <input {...fieldProps('displayName')} value={displayName} onChange={(event) => { setDisplayName(event.target.value); clearFieldError('displayName'); }} autoComplete="name" placeholder={t('nameHint')} maxLength={80} />
+              <label className={fieldLabel} htmlFor="signin-displayName">{t('yourName')}</label>
+              <div className="relative">
+                <UserRound className={fieldIcon} size={20} aria-hidden="true" />
+                <input {...fieldProps('displayName')} value={displayName} onChange={(event) => { setDisplayName(event.target.value); clearFieldError('displayName'); }} autoComplete="name" placeholder={t('nameHint')} maxLength={80} />
+              </div>
               <FieldError id="signin-displayName-error">{fieldErrors.displayName ? t(fieldErrors.displayName) : null}</FieldError>
             </div>
           ) : null}
           <div className={ui.field}>
-            <label className={ui.label} htmlFor="signin-email">{t('email')}</label>
-            <input {...fieldProps('email')} type="email" inputMode="email" value={email} onChange={(event) => { setEmail(event.target.value); clearFieldError('email'); }} autoComplete="email" placeholder="name@example.com" dir="ltr" />
+            <label className={fieldLabel} htmlFor="signin-email">{t('email')}</label>
+            <div className="relative">
+              <AtSign className={fieldIcon} size={20} aria-hidden="true" />
+              <input {...fieldProps('email')} type="email" inputMode="email" value={email} onChange={(event) => { setEmail(event.target.value); clearFieldError('email'); }} autoComplete="email" placeholder="name@example.com" dir="ltr" />
+            </div>
             <FieldError id="signin-email-error">{fieldErrors.email ? t(fieldErrors.email) : null}</FieldError>
           </div>
           <div className={ui.field}>
-            <label className={ui.label} htmlFor="signin-password">{t('password')}</label>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <label className={fieldLabel} htmlFor="signin-password">{t('password')}</label>
+              {!isSignUp ? <Link to="/reset-password" className="text-label-md font-semibold text-glaze-deep hover:underline hover:underline-offset-[3px]">{t('forgotPassword')}</Link> : null}
+            </div>
             <div className="relative">
-              <input {...fieldProps('password', isSignUp ? 'signin-password-hint' : undefined, 'pe-14')} type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => { setPassword(event.target.value); clearFieldError('password'); }} autoComplete={isSignUp ? 'new-password' : 'current-password'} />
-              <Button variant="ghost" size="icon" className="absolute end-1 top-1/2 -translate-y-1/2" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('hidePassword') : t('showPassword')} aria-pressed={showPassword}>
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              <Lock className={fieldIcon} size={20} aria-hidden="true" />
+              <input {...fieldProps('password', isSignUp ? 'signin-password-hint' : undefined, 'pe-12')} type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => { setPassword(event.target.value); clearFieldError('password'); }} autoComplete={isSignUp ? 'new-password' : 'current-password'} />
+              <Button variant="ghost" size="icon" className="absolute end-1 top-1/2 -translate-y-1/2 text-ink-3" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('hidePassword') : t('showPassword')} aria-pressed={showPassword}>
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </Button>
             </div>
-            {isSignUp && !fieldErrors.password ? <span id="signin-password-hint" className={ui.hint}>{t('passwordHint')}</span> : null}
+            {isSignUp && !fieldErrors.password ? <span id="signin-password-hint" className="text-label-sm text-ink-2">{t('passwordHint')}</span> : null}
             <FieldError id="signin-password-error">{fieldErrors.password ? t(fieldErrors.password) : null}</FieldError>
           </div>
-          <Button block size="lg" type="submit" loading={busy}>
+          <Button block size="lg" type="submit" loading={busy} className="mt-2 rounded-ctl text-label-lg shadow-md">
             {busy ? t('working') : isSignUp ? t('createAccount') : t('signIn')}
+            {!busy ? <ArrowRight className={ui.flipRtl} size={18} aria-hidden="true" /> : null}
           </Button>
+          {!isSignUp && canResendCode ? (
+            <Button variant="ghost" size="sm" className="justify-self-start text-label-md" onClick={() => void resendCode()} loading={busy}>
+              {t('resendCode')}
+            </Button>
+          ) : null}
         </form>
 
-        {!isSignUp ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 text-14">
-            <Link to="/reset-password" className={ui.textLink}>{t('forgotPassword')}</Link>
-            {canResendCode ? (
-              <Button variant="ghost" size="sm" onClick={() => void resendCode()} loading={busy}>
-                {t('resendCode')}
-              </Button>
-            ) : null}
+        <div className="flex items-start gap-3 rounded-xl bg-sunk-3/60 p-4">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-glaze/20 text-glaze-deep" aria-hidden="true"><ShieldCheck size={18} /></span>
+          <div className="grid gap-0.5">
+            <p className="text-label-md font-semibold text-glaze-deep">{t('authSafetyTitle')}</p>
+            <p className="text-body-sm text-ink-2">{t('authPrivacy')}</p>
           </div>
-        ) : null}
-
-        <p className={cn(ui.fine, 'flex gap-2')}><ShieldCheck className="shrink-0 text-glaze" size={16} aria-hidden="true" />{t('authPrivacy')}</p>
+        </div>
       </div>
 
-      <aside className="hidden lg:grid lg:gap-5" aria-labelledby="auth-aside-title">
-        <DecorativeShelf />
-        <h2 id="auth-aside-title" className="mt-4 font-book text-30 font-semibold leading-[1.2]">{t('authAsideTitle')}</h2>
-        <ul>
-          {benefits.map((key) => <li key={key} className="border-t border-line py-3 text-ink-2">{t(key)}</li>)}
+      <aside className="grid gap-6" aria-labelledby="auth-aside-title">
+        <div className="relative grid gap-4 overflow-hidden rounded-card bg-sunk p-5 sm:p-6">
+          <span className="pointer-events-none absolute -end-12 -top-12 h-48 w-48 rounded-full bg-cobalt-soft/60 blur-2xl" aria-hidden="true" />
+          <div className="relative grid gap-1">
+            <p className={ui.eyebrow}>{t('authAsideEyebrow')}</p>
+            <h2 id="auth-aside-title" className="font-book text-headline-sm font-semibold text-ink ar:leading-[1.5]">{t('authAsideTitle')}</h2>
+          </div>
+          <div className="relative hidden xs:block">
+            <DecorativeShelf />
+          </div>
+        </div>
+        <ul className="grid gap-2">
+          {benefits.map(({ title, copy, Icon }) => (
+            <li key={title} className="flex items-start gap-3 rounded-xl bg-surface p-4 shadow-sm">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-ctl bg-sunk-3 text-glaze-deep" aria-hidden="true"><Icon size={20} /></span>
+              <div className="grid gap-0.5">
+                <p className="text-title-md font-semibold text-ink">{t(title)}</p>
+                <p className="text-body-sm text-ink-2">{t(copy)}</p>
+              </div>
+            </li>
+          ))}
         </ul>
       </aside>
     </div>

@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { hoverable } from '../../lib/ui';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-quiet' | 'link';
+export type ButtonVariant = 'primary' | 'secondary' | 'tonal' | 'ghost' | 'danger' | 'danger-quiet' | 'link';
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 const base = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-ctl border border-transparent text-center font-semibold leading-[1.2] transition-colors duration-150 ease-[ease] disabled:cursor-not-allowed disabled:opacity-50';
@@ -16,8 +16,10 @@ const sizes: Record<ButtonSize, string> = {
 };
 
 const variants: Record<ButtonVariant, string> = {
-  primary: `bg-glaze text-on-glaze ${hoverable}:bg-glaze-deep`,
-  secondary: `border-line-strong bg-surface text-ink ${hoverable}:border-ink-3`,
+  primary: `bg-glaze text-on-glaze shadow-sm ${hoverable}:bg-glaze-deep`,
+  secondary: `border-line-strong bg-surface text-ink ${hoverable}:bg-sunk-2`,
+  /** Tinted fill, e.g. "Show more books" in the Stitch design. */
+  tonal: `bg-sunk text-glaze-deep ${hoverable}:bg-sunk-3`,
   ghost: `bg-transparent text-ink-2 ${hoverable}:bg-sunk ${hoverable}:text-ink`,
   danger: `bg-pom text-white ${hoverable}:brightness-[.92]`,
   'danger-quiet': `border-pom/35 bg-transparent text-pom ${hoverable}:bg-pom-soft`,

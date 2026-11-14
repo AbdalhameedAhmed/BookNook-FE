@@ -8,7 +8,14 @@ const twMerge = extendTailwindMerge({
   },
   extend: {
     classGroups: {
-      'font-size': [{ text: ['2xs', '13', '15', '17', '21', '22', '28', '30'] }],
+      'font-size': [{
+        text: [
+          '2xs', '13', '15', '17', '21', '22', '28', '30',
+          // Stitch type roles (these do set line-height; add an explicit `leading-*` after them to override).
+          'display-lg', 'display-lg-mobile', 'headline-lg', 'headline-lg-mobile', 'headline-md', 'headline-sm',
+          'title-lg', 'title-md', 'body-lg', 'body-md', 'body-sm', 'label-lg', 'label-md', 'label-sm',
+        ],
+      }],
     },
   },
 });
