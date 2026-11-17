@@ -14,7 +14,7 @@ export const editorMessages = {
     editorChecklistTitle: 'Before you publish',
     editorCheckOwnCopy: 'Photograph your own copy, not a picture from the internet.',
     editorCheckPublicPlace: 'Meet in a busy public place, ideally in daylight.',
-    editorCheckNoFees: 'The reader pays or swaps with you in person. Rfoof takes no fees.',
+    editorCheckNoFees: 'Buyers pay from their Rfoof wallet. You receive the price minus a small Rfoof fee once they confirm they got the book.',
     editorPublishNote: 'Readers can see your book as soon as you publish.',
   },
   ar: {
@@ -31,7 +31,7 @@ export const editorMessages = {
     editorChecklistTitle: 'قبل النشر',
     editorCheckOwnCopy: 'صوّر نسختك أنت، لا صورة من الإنترنت.',
     editorCheckPublicPlace: 'التقِ في مكان عام مزدحم، ويُفضَّل نهاراً.',
-    editorCheckNoFees: 'يدفع القارئ أو يبادلك وجهاً لوجه، ولا تأخذ رفوف أي رسوم.',
+    editorCheckNoFees: 'يدفع المشتري من محفظته على رفوف. تستلم السعر مخصوماً منه رسوم رفوف البسيطة بعد أن يؤكد استلام الكتاب.',
     editorPublishNote: 'سيرى القرّاء كتابك فور نشره.',
   },
 } as const;

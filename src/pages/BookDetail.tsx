@@ -15,6 +15,7 @@ import { Dialog, dialogFooter } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 import { BookCover, StatusPill, TypeTag, coverSkeleton } from '../components/book';
+import { CostBreakdown, TopUpNotice, fill, useEgp } from '../components/deals';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
@@ -68,6 +69,12 @@ export default function BookDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const egp = useEgp();
+  // Paid requests: the fee, the requester's balance and (exchange) the books they can offer.
+  const [fee, setFee] = useState<number | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [myBooks, setMyBooks] = useState<Listing[] | null>(null);
+  const [offered, setOffered] = useState<string[]>([]);
 
   const load = useCallback(() => {
     let active = true;
@@ -86,6 +93,25 @@ export default function BookDetail() {
   }, [listingId, t]);
 
   useEffect(() => load(), [load]);
+
+  const token = session?.access_token;
+  const listingType = listing?.listing_type;
+  const needsWallet = Boolean(token && listing && listing.status === 'active' && listing.seller_id !== session?.user.id
+    && (listingType === 'sale' || listingType === 'exchange'));
+  const loadWallet = useCallback(() => {
+    let active = true;
+    if (!needsWallet || !token) return () => { active = false; };
+    Promise.all([api.wallet(token), listingType === 'exchange' ? api.myListings(token) : Promise.resolve(null)])
+      .then(([wallet, books]) => {
+        if (!active) return;
+        setFee(wallet.platform_fee_egp);
+        setBalance(wallet.balance_egp);
+        setMyBooks(books ? books.filter((book) => book.status === 'active') : null);
+      })
+      .catch(() => { /* The request itself will report a problem; the breakdown is best effort. */ });
+    return () => { active = false; };
+  }, [needsWallet, token, listingType]);
+  useEffect(() => loadWallet(), [loadWallet]);
 
   if (loading) return <DetailSkeleton label={t('loadingBooks')} />;
   if (loadError && !loadError.notFound) {
@@ -115,19 +141,32 @@ export default function BookDetail() {
     navigate('/signin', { state: { from: `/books/${listing.id}` } });
   };
 
+  const isExchange = listing.listing_type === 'exchange';
+  const salePrice = listing.listing_type === 'sale' ? listing.price_egp ?? 0 : 0;
+  const amountNeeded = fee === null ? null : needsWallet ? salePrice + fee : 0;
+  const walletReady = !needsWallet || (balance !== null && amountNeeded !== null && (!isExchange || myBooks !== null));
+  const shortOfMoney = needsWallet && balance !== null && amountNeeded !== null && balance < amountNeeded;
+  const missingOffer = needsWallet && isExchange && offered.length === 0;
+  const toggleOffer = (id: string) => setOffered((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+
   const requestBook = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!session) {
       requireSignIn('signInBeforeRequest');
       return;
     }
+    if (missingOffer) {
+      setRequestError(t('offersRequired'));
+      return;
+    }
     setSubmitting(true);
     setRequestError('');
     try {
-      await api.createRequest(session.access_token, listing.id, message.trim() || 'I’m interested in this book.');
+      await api.createRequest(session.access_token, listing.id, message.trim() || 'I’m interested in this book.', isExchange ? offered : []);
       toast.success(t('requestSentTitle'), t('requestSent'));
       setRequestSent(true);
       setMessage('');
+      setOffered([]);
     } catch (reason) {
       setRequestError(describeError(reason, t, 'requestError'));
     } finally {
@@ -291,8 +330,43 @@ export default function BookDetail() {
                     <span id="request-note-count" className={ui.hint}>{messageLimit - message.length} {t('charactersLeft')}</span>
                   </div>
                 ) : null}
+                {needsWallet && isExchange && myBooks !== null ? (
+                  <fieldset className="grid gap-2">
+                    <legend className="text-label-md font-semibold text-ink">{t('chooseOffers')}</legend>
+                    <p className={ui.hint}>{t('chooseOffersHint')}</p>
+                    {myBooks.length === 0 ? (
+                      <p className="rounded-xl bg-sunk p-3 text-body-sm text-ink-2">{t('noBooksToOffer')} <Link className={ui.textLink} to="/sell">{t('listBook')}</Link></p>
+                    ) : (
+                      <ul className="grid max-h-60 gap-1.5 overflow-y-auto">
+                        {myBooks.map((book) => (
+                          <li key={book.id}>
+                            <label className={cn('flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 transition-colors', offered.includes(book.id) ? 'border-glaze bg-glaze-soft/40' : 'border-line bg-sunk hover:border-line-strong')}>
+                              <input type="checkbox" className="h-5 w-5 flex-none accent-[rgb(var(--glaze))]" checked={offered.includes(book.id)} onChange={() => toggleOffer(book.id)} />
+                              <span className="min-w-0">
+                                <span className="block truncate text-label-lg font-semibold text-ink">{book.title}</span>
+                                <span className="block truncate text-body-sm text-ink-3">{book.author || t('authorNotListed')} · {formatCondition(book.condition, t)}</span>
+                              </span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </fieldset>
+                ) : null}
+                {needsWallet && fee !== null && balance !== null ? (
+                  <div className="grid gap-2">
+                    <CostBreakdown
+                      rows={isExchange ? [] : [{ label: t('bookPrice'), amount: salePrice }, { label: t('rfoofFee'), amount: fee }]}
+                      total={{ label: isExchange ? t('rfoofFee') : t('totalHeld'), amount: amountNeeded ?? 0 }}
+                      balance={balance}
+                    />
+                    {shortOfMoney
+                      ? <TopUpNotice title={t('insufficientTitle')}>{fill(t('insufficientCopy'), { need: egp(amountNeeded ?? 0), have: egp(balance) })}</TopUpNotice>
+                      : <p className={ui.hint}>{isExchange ? t('exchangeHoldNote') : t('saleHoldNote')}</p>}
+                  </div>
+                ) : needsWallet ? <p className={ui.hint} aria-live="polite">{t('loadingWalletShort')}</p> : null}
                 {requestError ? <Alert onDismiss={() => setRequestError('')} dismissLabel={t('dismiss')}>{requestError}</Alert> : null}
-                <Button type="submit" block size="lg" className="rounded-xl shadow-card" loading={submitting} disabled={!canRequest}>
+                <Button type="submit" block size="lg" className="rounded-xl shadow-card" loading={submitting} disabled={!canRequest || !walletReady || shortOfMoney || (isExchange && myBooks?.length === 0)}>
                   {submitting ? null : <Send size={18} className={ui.flipRtl} aria-hidden="true" />}
                   {submitting ? t('sending') : session ? t('requestBook') : t('signInToRequest')}
                 </Button>

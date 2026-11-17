@@ -31,10 +31,20 @@ const knownDetails: Record<string, MessageKey> = {
   'You have too many top-ups waiting for review': 'errorTooManyTopups',
   'Only pending top-ups can be reviewed': 'errorTopupReviewed',
   'Moderator access required': 'errorForbidden',
+  'Insufficient wallet balance': 'errorInsufficient',
+  'Choose at least one of your books to offer': 'offersRequired',
+  'Offered books must be your own available listings': 'errorOffersInvalid',
+  'Choose one of the offered books': 'errorChooseOffer',
+  'The chosen book is no longer available': 'errorOfferUnavailable',
+  'Only the buyer can confirm receiving the book': 'errorBuyerOnlyConfirm',
+  'You already confirmed this handover': 'errorAlreadyConfirmed',
+  'This book is in an open handover. Finish or cancel the handover first.': 'errorListingInHandover',
+  'This handover is closed': 'chatClosed',
 };
 
 const statusMessages: Record<number, MessageKey> = {
   401: 'errorSession',
+  402: 'errorInsufficient',
   403: 'errorForbidden',
   404: 'errorNotFound',
   409: 'errorConflict',

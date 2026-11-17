@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  BookOpen, ChevronRight, ExternalLink, Flag, Handshake, Inbox, LayoutDashboard, ReceiptText, ShieldCheck, Users, Wallet,
+  BookOpen, ChevronRight, Coins, ExternalLink, Flag, Handshake, Hourglass, Inbox, LayoutDashboard, ReceiptText, Repeat, ShieldCheck, Users, Wallet,
 } from 'lucide-react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { describeError } from '../errors';
 import { useLanguage } from '../i18n';
-import type { AdminOverview, AdminTopup } from '../types';
+import type { AdminOverview, AdminTopup, Transaction } from '../types';
 import { Alert } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { Dialog, useConfirm } from '../components/ui/dialog';
@@ -34,6 +34,7 @@ export function AdminLayout() {
   const tabs = [
     { to: '/admin', label: t('adminOverviewTab'), icon: LayoutDashboard, end: true },
     { to: '/admin/topups', label: t('adminPendingTab'), icon: ReceiptText },
+    { to: '/admin/handovers', label: t('adminHandoversTab'), icon: Handshake },
   ];
 
   return (
@@ -93,6 +94,8 @@ export function AdminOverviewPage() {
     { label: t('statOpenReports'), value: String(o.reports_open), icon: <Flag size={20} />, tone: 'bg-pom-soft text-pom' },
     { label: t('statPendingTopups'), value: String(o.topups_pending), note: `${formatEgp(o.topups_pending_egp, language, t)}`, icon: <ReceiptText size={20} />, tone: 'bg-ochre-soft text-ochre-ink' },
     { label: t('statWalletTotal'), value: formatEgp(o.wallet_balance_total_egp, language, t), icon: <Wallet size={20} />, tone: 'bg-glaze-fixed text-glaze-deep' },
+    { label: t('statHeld'), value: formatEgp(o.held_total_egp, language, t), icon: <Hourglass size={20} />, tone: 'bg-ochre-soft text-ochre-ink' },
+    { label: t('statRevenue'), value: formatEgp(o.platform_revenue_egp, language, t), icon: <Coins size={20} />, tone: 'bg-glaze-fixed text-glaze-deep' },
   ] : [];
 
   return (
@@ -106,7 +109,7 @@ export function AdminOverviewPage() {
             <span className="font-book text-headline-md font-bold text-ink">{tile.value}</span>
             {tile.note ? <span className="text-label-sm text-ink-3">{tile.note}</span> : null}
           </li>
-        )) : Array.from({ length: 8 }, (_, index) => <li key={index} className={cn(ui.skeleton, 'h-36 rounded-card')} />)}
+        )) : Array.from({ length: 10 }, (_, index) => <li key={index} className={cn(ui.skeleton, 'h-36 rounded-card')} />)}
       </ul>
       {o && o.topups_pending > 0 ? (
         <Link to="/admin/topups" className={cn(ui.card, 'group flex items-center justify-between gap-3 p-4 md:p-5')}>
@@ -242,6 +245,79 @@ export function AdminTopupsPage() {
           <textarea id="reject-note" className={cn(ui.control, ui.textarea)} maxLength={500} rows={3} value={note} placeholder={t('rejectNotePlaceholder')} onChange={(event) => setNote(event.target.value)} />
         </label>
       </Dialog>
+    </section>
+  );
+}
+
+export function AdminHandoversPage() {
+  const { session } = useAuth();
+  const { t, language } = useLanguage();
+  const confirm = useConfirm();
+  const toast = useToast();
+  const [items, setItems] = useState<Transaction[] | null>(null);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    let active = true;
+    const token = session?.access_token;
+    if (!token) return () => { active = false; };
+    setError('');
+    api.admin.transactions(token)
+      .then((next) => { if (active) setItems(next); })
+      .catch((reason) => { if (active) setError(describeError(reason, t, 'adminLoadError')); });
+    return () => { active = false; };
+  }, [session?.access_token, t]);
+
+  useEffect(() => load(), [load]);
+
+  const cancel = async (transaction: Transaction) => {
+    if (!session) return;
+    const ok = await confirm({ title: t('confirmCancelDealTitle'), description: t('confirmCancelDealCopy'), confirmLabel: t('cancelRefund'), cancelLabel: t('goBack'), tone: 'danger' });
+    if (!ok) return;
+    setBusyId(transaction.id);
+    try {
+      await api.admin.cancelTransaction(session.access_token, transaction.id);
+      toast.success(t('dealCancelled'));
+      setItems((current) => current?.filter((item) => item.id !== transaction.id) ?? null);
+    } catch (reason) {
+      toast.error(t('cancelDealFailed'), describeError(reason, t, 'cancelDealFailed'));
+      load();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  if (error) return <Alert title={t('adminLoadError')} onRetry={load} retryLabel={t('tryAgain')}>{error}</Alert>;
+  if (!items) return <div className="grid gap-3" aria-busy="true">{[0, 1].map((key) => <span key={key} className={cn(ui.skeleton, 'h-32 rounded-card')} />)}</div>;
+
+  return (
+    <section aria-labelledby="admin-handovers-heading">
+      <div className="mb-4">
+        <h2 id="admin-handovers-heading" className="font-book text-headline-sm font-semibold text-ink ar:leading-[1.5]">{t('adminHandoversTab')}</h2>
+        <p className="text-body-sm text-ink-2">{t('adminHandoversCopy')}</p>
+      </div>
+      {items.length === 0 ? <EmptyState icon={<Handshake size={26} />} title={t('noOpenHandovers')} /> : (
+        <ul className="grid gap-3">
+          {items.map((item) => {
+            const held = item.buyer_held_egp + item.seller_held_egp;
+            return (
+              <li key={item.id} className={cn(ui.card, 'grid gap-3 p-4 md:grid-cols-[1fr_auto] md:items-center md:p-5')}>
+                <div className="grid min-w-0 gap-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <Link className="truncate text-title-md font-semibold text-ink hover:text-glaze-deep" to={`/books/${item.listing_id}`}>{item.listing_title}</Link>
+                    <span className="rounded-full bg-sunk-2 px-2 py-0.5 text-label-sm font-semibold text-ink-2">{t(item.kind === 'sale' ? 'forSale' : item.kind === 'exchange' ? 'exchange' : 'free')}</span>
+                  </span>
+                  {item.offered_listing_title ? <span className="flex items-center gap-1.5 text-body-sm text-ink-2"><Repeat size={14} aria-hidden="true" />{t('swapFor')} {item.offered_listing_title}</span> : null}
+                  <span className="text-body-sm text-ink-2">{t('buyerLabel')}: {item.buyer_name} · {t('sellerLabel')}: {item.seller_name}</span>
+                  <span className="text-body-sm text-ink-3">{formatDateTime(item.created_at ?? '', language)}{held ? ` · ${t('walletHeld')} ${formatEgp(held, language, t)}` : ''}</span>
+                </div>
+                <Button variant="danger-quiet" size="sm" loading={busyId === item.id} disabled={busyId !== null} onClick={() => void cancel(item)}>{t('cancelRefund')}</Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }

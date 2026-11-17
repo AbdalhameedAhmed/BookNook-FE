@@ -11,7 +11,7 @@ import ConfirmEmail from './pages/ConfirmEmail';
 import ListingEditor from './pages/ListingEditor';
 import { AccountLayout, AccountOverview, MyBooksPage, RequestsPage, TransactionsPage } from './pages/Account';
 import { WalletPage } from './pages/Wallet';
-import { AdminLayout, AdminOverviewPage, AdminTopupsPage } from './pages/Admin';
+import { AdminHandoversPage, AdminLayout, AdminOverviewPage, AdminTopupsPage } from './pages/Admin';
 import { useLanguage } from './i18n';
 import { useTheme } from './theme';
 import { buttonClass } from './components/ui/button';
@@ -41,6 +41,7 @@ export default function App() {
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route index element={<AdminOverviewPage />} />
           <Route path="topups" element={<AdminTopupsPage />} />
+          <Route path="handovers" element={<AdminHandoversPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>

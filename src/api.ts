@@ -1,5 +1,5 @@
 import type {
-  AdminOverview, AdminTopup, AuthUser, Listing, ListingPayload, BookRequest, SessionResponse, TopupStatus, Transaction, Wallet, WalletTopup,
+  AdminOverview, AdminTopup, AuthUser, ChatMessage, Listing, ListingPayload, BookRequest, SessionResponse, TopupStatus, Transaction, Wallet, WalletTopup,
 } from './types';
 import { ApiError, NetworkError, readDetail } from './errors';
 
@@ -80,12 +80,18 @@ export const api = {
   }),
   deactivateListing: (token: string, id: string) => apiRequest(`/api/v1/listings/${id}/deactivate`, token, { method: 'POST' }),
   markListingComplete: (token: string, id: string) => apiRequest<{ status: string }>(`/api/v1/listings/${id}/mark-complete`, token, { method: 'POST' }),
-  createRequest: (token: string, id: string, message: string) => apiRequest<BookRequest>(`/api/v1/listings/${id}/requests`, token, {
-    method: 'POST', body: JSON.stringify({ message }),
+  fees: () => apiRequest<{ platform_fee_egp: number }>('/api/v1/fees'),
+  /** Sale: holds price + fee from the wallet. Exchange: holds the fee; `offeredListingIds` are the requester's own books. */
+  createRequest: (token: string, id: string, message: string, offeredListingIds: string[] = []) => apiRequest<BookRequest>(`/api/v1/listings/${id}/requests`, token, {
+    method: 'POST', body: JSON.stringify({ message, offered_listing_ids: offeredListingIds }),
   }),
-  updateRequest: (token: string, id: string, status: string) => apiRequest<BookRequest>(`/api/v1/requests/${id}`, token, {
-    method: 'PATCH', body: JSON.stringify({ status }),
+  updateRequest: (token: string, id: string, status: string, chosenListingId?: string) => apiRequest<BookRequest>(`/api/v1/requests/${id}`, token, {
+    method: 'PATCH', body: JSON.stringify({ status, chosen_listing_id: chosenListingId ?? null }),
   }),
+  messages: async (token: string, transactionId: string) =>
+    (await apiRequest<{ items: ChatMessage[] }>(`/api/v1/transactions/${transactionId}/messages`, token)).items,
+  sendMessage: (token: string, transactionId: string, body: string) =>
+    apiRequest<ChatMessage>(`/api/v1/transactions/${transactionId}/messages`, token, postJson({ body })),
   activity: async (token: string) => {
     const [requestResponse, transactionResponse] = await Promise.all([
       apiRequest<{ items: BookRequest[] }>('/api/v1/me/requests', token),
@@ -93,7 +99,8 @@ export const api = {
     ]);
     return { requests: requestResponse.items, transactions: transactionResponse.items };
   },
-  completeTransaction: (token: string, id: string) => apiRequest(`/api/v1/transactions/${id}/complete`, token, { method: 'POST' }),
+  /** Sale: buyer confirms receipt (releases payment). Exchange: each side confirms; completes when both have. */
+  completeTransaction: (token: string, id: string) => apiRequest<Transaction>(`/api/v1/transactions/${id}/complete`, token, { method: 'POST' }),
   reportListing: (token: string, id: string, reason: string, details: string | null) => apiRequest('/api/v1/reports', token, {
     method: 'POST', body: JSON.stringify({ listing_id: id, reason, details }),
   }),
@@ -113,5 +120,9 @@ export const api = {
     approveTopup: (token: string, id: string) => apiRequest<WalletTopup>(`/api/v1/admin/wallet-topups/${id}/approve`, token, { method: 'POST' }),
     rejectTopup: (token: string, id: string, note: string) =>
       apiRequest<WalletTopup>(`/api/v1/admin/wallet-topups/${id}/reject`, token, postJson({ note: note || null })),
+    transactions: async (token: string) =>
+      (await apiRequest<{ items: Transaction[] }>('/api/v1/admin/transactions?status=arranging', token)).items,
+    cancelTransaction: (token: string, id: string) =>
+      apiRequest<Transaction>(`/api/v1/admin/transactions/${id}/cancel`, token, { method: 'POST' }),
   },
 };

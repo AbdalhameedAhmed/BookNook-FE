@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   ArrowDownToLine, ArrowRight, ArrowUpFromLine, BookOpen, Check, CheckCircle2, ChevronRight, Handshake, Inbox,
-  LayoutDashboard, Leaf, Library, LogOut, Mail, MapPin, Pencil, Plus, Quote, Send, ShieldCheck, Wallet,
+  Hourglass, LayoutDashboard, Leaf, Library, LogOut, Mail, MapPin, MessageCircle, Pencil, Plus, Quote, Repeat, Send, ShieldCheck, Wallet,
 } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
@@ -18,6 +18,7 @@ import { useConfirm } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 import { BookCover, StatusPill, typeTones } from '../components/book';
+import { ChatThread, TopUpNotice, fill, useEgp } from '../components/deals';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
@@ -427,10 +428,19 @@ export function RequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [wallet, setWallet] = useState<{ balance: number; fee: number } | null>(null);
+  /** Exchange requests: which offered book the owner picked, by request id. */
+  const [chosen, setChosen] = useState<Record<string, string>>({});
+  const egp = useEgp();
 
   const reload = useCallback(async () => {
     if (!session) return;
-    try { setRequests((await api.activity(session.access_token)).requests); setError(''); }
+    try {
+      const [activity, myWallet] = await Promise.all([api.activity(session.access_token), api.wallet(session.access_token)]);
+      setRequests(activity.requests);
+      setWallet({ balance: myWallet.balance_egp, fee: myWallet.platform_fee_egp });
+      setError('');
+    }
     catch (reason) { setError(describeError(reason, t, 'requestFailed')); }
     finally { setLoading(false); }
   }, [session, t]);
@@ -450,7 +460,7 @@ export function RequestsPage() {
     if (!confirmed) return;
     setBusyId(request.id);
     try {
-      await api.updateRequest(session.access_token, request.id, status);
+      await api.updateRequest(session.access_token, request.id, status, status === 'accepted' ? chosen[request.id] : undefined);
       toast.success(t('requestUpdated'), t(copy.done));
       await reload();
     } catch (reason) {
@@ -470,6 +480,11 @@ export function RequestsPage() {
   const renderRequest = (request: BookRequest, isIncoming: boolean) => {
     const busy = busyId === request.id;
     const closed = request.status !== 'pending' && request.status !== 'accepted';
+    const pending = request.status === 'pending';
+    const isSwap = request.kind === 'exchange';
+    const fee = wallet?.fee ?? 0;
+    const ownerShort = isIncoming && isSwap && wallet !== null && wallet.balance < fee;
+    const cannotAccept = isSwap && (!chosen[request.id] || ownerShort);
     return (
       <li key={request.id} className={cn(ui.card, 'grid gap-4 p-4 md:p-6', closed && 'bg-surface/60 opacity-80 shadow-none')}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -489,7 +504,7 @@ export function RequestsPage() {
             <div className="flex flex-wrap items-center gap-2.5 self-end lg:self-center">
               {isIncoming ? <>
                 <Button variant="ghost" className="min-h-11 rounded-xl bg-sunk [&:not(:disabled):hover]:text-pom" onClick={() => void update(request, 'rejected')} disabled={busy}>{t('decline')}</Button>
-                <Button className="min-h-11 rounded-xl" onClick={() => void update(request, 'accepted')} loading={busy}>{busy ? null : <Check size={18} aria-hidden="true" />}{t('acceptRequest')}</Button>
+                <Button className="min-h-11 rounded-xl" onClick={() => void update(request, 'accepted')} loading={busy} disabled={cannotAccept}>{busy ? null : <Check size={18} aria-hidden="true" />}{t('acceptRequest')}</Button>
               </> : <Button variant="ghost" className="min-h-11 rounded-xl underline underline-offset-[3px] [&:not(:disabled):hover]:text-pom" onClick={() => void update(request, 'cancelled')} loading={busy}>{t('cancelRequest')}</Button>}
             </div>
           ) : null}
@@ -498,6 +513,46 @@ export function RequestsPage() {
           <Quote size={18} className="mt-0.5 flex-none text-glaze-deep" aria-hidden="true" />
           <p className={cn('[overflow-wrap:anywhere]', !request.message && 'text-ink-3')}>{request.message || t('noMessage')}</p>
         </blockquote>
+        {isSwap && request.offers.length ? (
+          <fieldset className="grid gap-2" disabled={!isIncoming || !pending}>
+            <legend className="mb-1 text-label-md font-semibold text-ink">{t('offeredBooks')}</legend>
+            {isIncoming && pending ? <p className="text-body-sm text-ink-2">{t('chooseBookToTake')}</p> : null}
+            <ul className="grid gap-1.5 sm:grid-cols-2">
+              {request.offers.map((offer) => {
+                const available = offer.status === 'active';
+                const picked = chosen[request.id] === offer.listing_id;
+                return (
+                  <li key={offer.listing_id}>
+                    <label className={cn('flex min-h-11 items-center gap-3 rounded-xl border px-3 py-2', picked ? 'border-glaze bg-glaze-soft/40' : 'border-line bg-sunk', isIncoming && pending && available ? 'cursor-pointer' : 'opacity-80')}>
+                      {isIncoming && pending ? (
+                        <input type="radio" name={`offer-${request.id}`} className="h-5 w-5 flex-none accent-[rgb(var(--glaze))]" checked={picked} disabled={!available}
+                          onChange={() => setChosen((current) => ({ ...current, [request.id]: offer.listing_id }))} />
+                      ) : null}
+                      <span className="min-w-0">
+                        <Link className="block truncate text-label-lg font-semibold text-ink hover:text-glaze-deep" to={`/books/${offer.listing_id}`}>{offer.title}</Link>
+                        <span className="block truncate text-body-sm text-ink-3">
+                          {offer.author || t('authorNotListed')}{available ? '' : ` · ${t('offerNoLongerAvailable')}`}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </fieldset>
+        ) : null}
+        {pending && isIncoming && request.kind === 'sale' ? (
+          <p className="rounded-xl bg-cobalt-soft p-3.5 text-body-md text-ink">
+            {fill(t('sellerPayoutNote'), { payout: egp(Math.max(request.price_egp - fee, 0)), price: egp(request.price_egp), fee: egp(Math.min(fee, request.price_egp)) })}
+          </p>
+        ) : null}
+        {pending && isIncoming && isSwap && wallet ? (ownerShort
+          ? <TopUpNotice title={t('insufficientTitle')}>{fill(t('ownerFeeShort'), { fee: egp(fee), have: egp(wallet.balance) })}</TopUpNotice>
+          : <p className="rounded-xl bg-cobalt-soft p-3.5 text-body-md text-ink">{fill(t('ownerFeeNote'), { fee: egp(fee), have: egp(wallet.balance) })}</p>
+        ) : null}
+        {pending && !isIncoming && request.held_egp > 0 ? (
+          <p className="rounded-xl bg-sunk p-3.5 text-body-md text-ink-2">{fill(t('heldForRequest'), { amount: egp(request.held_egp) })}</p>
+        ) : null}
         {request.status === 'accepted' ? (
           <p className="flex items-start gap-3 rounded-xl bg-glaze-soft p-3.5 text-body-md text-ink">
             <Handshake size={20} className="mt-0.5 flex-none text-glaze-deep" aria-hidden="true" />
@@ -548,6 +603,8 @@ export function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState<string | null>(null);
+  const egp = useEgp();
 
   const reload = useCallback(async () => {
     if (!session) return;
@@ -560,13 +617,19 @@ export function TransactionsPage() {
 
   const complete = async (transaction: Transaction) => {
     if (!session) return;
-    const confirmed = await confirm({ title: t('confirmTransactionTitle'), description: t('confirmTransactionCopy'), confirmLabel: t('markComplete'), cancelLabel: t('goBack') });
+    const dialog = transaction.kind === 'sale'
+      ? { title: t('confirmReceivedTitle'), description: fill(t('confirmReceivedCopy'), { amount: egp(transaction.price_egp) }), confirmLabel: t('confirmReceived') }
+      : transaction.kind === 'exchange'
+        ? { title: t('confirmSwapTitle'), description: t('confirmSwapCopy'), confirmLabel: t('confirmSwap') }
+        : { title: t('confirmTransactionTitle'), description: t('confirmTransactionCopy'), confirmLabel: t('markComplete') };
+    const confirmed = await confirm({ ...dialog, cancelLabel: t('goBack') });
     if (!confirmed) return;
     setBusyId(transaction.id);
     try {
-      await api.completeTransaction(session.access_token, transaction.id);
-      setTransactions((current) => current.map((item) => item.id === transaction.id ? { ...item, status: 'completed' } : item));
-      toast.success(t('statusCompleted'), t('transactionCompleted'));
+      const updated = await api.completeTransaction(session.access_token, transaction.id);
+      setTransactions((current) => current.map((item) => item.id === transaction.id ? { ...item, ...updated } : item));
+      if (updated.status === 'completed') toast.success(t('statusCompleted'), t('transactionCompleted'));
+      else toast.success(t('youConfirmed'));
     } catch (reason) {
       toast.error(t('completeFailed'), describeError(reason, t, 'completeFailed'));
     } finally {
@@ -577,6 +640,7 @@ export function TransactionsPage() {
   const current = transactions.filter((item) => item.status === 'arranging' || item.status === 'disputed');
   const past = transactions.filter((item) => item.status !== 'arranging' && item.status !== 'disputed');
   const receiving = (transaction: Transaction) => transaction.buyer_id === session?.user.id;
+  const otherName = (transaction: Transaction) => (receiving(transaction) ? transaction.seller_name : transaction.buyer_name) || t('brandName');
 
   return (
     <section aria-labelledby="handovers-heading" aria-busy={loading}>
@@ -603,6 +667,12 @@ export function TransactionsPage() {
                   <StatusPill status={transaction.status} />
                 </div>
                 <Link className="font-book text-title-lg font-semibold text-ink hover:text-glaze-deep md:text-headline-sm" to={`/books/${transaction.listing_id}`}>{transaction.listing_title || t('openBook')}</Link>
+                {transaction.kind === 'exchange' && transaction.offered_listing_id ? (
+                  <p className="-mt-2 flex items-center gap-1.5 text-body-md text-ink-2">
+                    <Repeat size={16} className="text-cobalt" aria-hidden="true" />{t('swapFor')}{' '}
+                    <Link className="font-semibold text-ink hover:text-glaze-deep" to={`/books/${transaction.offered_listing_id}`}>{transaction.offered_listing_title}</Link>
+                  </p>
+                ) : null}
                 <div className="grid gap-1.5 rounded-xl bg-sunk p-4 text-body-md">
                   <p className="flex items-start gap-2 text-ink">
                     <MapPin size={18} className="mt-0.5 flex-none text-glaze-deep" aria-hidden="true" />
@@ -610,13 +680,21 @@ export function TransactionsPage() {
                   </p>
                   <p className="ps-[26px] text-body-sm text-ink-2">{t('publicPlaceTip')}</p>
                 </div>
+                <HandoverMoney transaction={transaction} isBuyer={receiving(transaction)} />
                 {transaction.status === 'arranging' ? (
-                  <div className="mt-auto grid gap-2 pt-1">
-                    <Button block className="min-h-12 rounded-xl" onClick={() => void complete(transaction)} loading={busyId === transaction.id}>
-                      {busyId === transaction.id ? null : <CheckCircle2 size={18} aria-hidden="true" />}{t('markComplete')}
-                    </Button>
-                    <p className="text-center text-label-sm text-ink-2">{t('confirmOnlyAfter')}</p>
-                  </div>
+                  <HandoverAction
+                    transaction={transaction}
+                    isBuyer={receiving(transaction)}
+                    busy={busyId === transaction.id}
+                    onConfirm={() => void complete(transaction)}
+                  />
+                ) : null}
+                <Button variant="tonal" block className="min-h-11 rounded-xl" aria-expanded={chatOpen === transaction.id} onClick={() => setChatOpen((open) => (open === transaction.id ? null : transaction.id))}>
+                  <MessageCircle size={18} aria-hidden="true" />
+                  {chatOpen === transaction.id ? t('hideChat') : fill(t('openChat'), { name: otherName(transaction) })}
+                </Button>
+                {chatOpen === transaction.id ? (
+                  <ChatThread transactionId={transaction.id} otherName={otherName(transaction)} canSend={transaction.status === 'arranging'} />
                 ) : null}
               </li>
             ))}</ul>
@@ -641,6 +719,68 @@ export function TransactionsPage() {
       )}
     </section>
   );
+}
+
+/** What this handover costs or pays the signed-in user. */
+function HandoverMoney({ transaction, isBuyer }: { transaction: Transaction; isBuyer: boolean }) {
+  const { t } = useLanguage();
+  const egp = useEgp();
+  if (transaction.kind === 'sale' && transaction.price_egp > 0) {
+    const amount = isBuyer ? transaction.price_egp + transaction.buyer_fee_egp : transaction.price_egp - transaction.seller_fee_egp;
+    return (
+      <p className="flex items-baseline justify-between gap-3 rounded-xl border border-line px-4 py-3 text-body-md">
+        <span className="text-ink-2">{isBuyer ? t('youPay') : t('youGet')}</span>
+        <span className="text-end"><strong className="font-book text-title-lg text-ink">{egp(amount)}</strong>
+          <span className="block text-body-sm text-ink-3">{egp(transaction.price_egp)} {isBuyer ? '+' : '−'} {t('rfoofFee')} {egp(isBuyer ? transaction.buyer_fee_egp : transaction.seller_fee_egp)}</span>
+        </span>
+      </p>
+    );
+  }
+  if (transaction.kind === 'exchange') {
+    const fee = isBuyer ? transaction.buyer_fee_egp : transaction.seller_fee_egp;
+    return fee > 0 ? (
+      <p className="flex items-baseline justify-between gap-3 rounded-xl border border-line px-4 py-3 text-body-md">
+        <span className="text-ink-2">{t('rfoofFee')}</span><strong className="text-ink">{egp(fee)}</strong>
+      </p>
+    ) : null;
+  }
+  return null;
+}
+
+/** The confirm step: buyer-only for sales, both sides for swaps, either side for free books. */
+function HandoverAction({ transaction, isBuyer, busy, onConfirm }: { transaction: Transaction; isBuyer: boolean; busy: boolean; onConfirm: () => void }) {
+  const { t } = useLanguage();
+  const egp = useEgp();
+  const button = (label: string) => (
+    <div className="mt-auto grid gap-2 pt-1">
+      <Button block className="min-h-12 rounded-xl" onClick={onConfirm} loading={busy}>
+        {busy ? null : <CheckCircle2 size={18} aria-hidden="true" />}{label}
+      </Button>
+      <p className="text-center text-label-sm text-ink-2">{t('confirmOnlyAfter')}</p>
+    </div>
+  );
+
+  if (transaction.kind === 'sale') {
+    return isBuyer ? button(t('confirmReceived')) : (
+      <p className="mt-auto flex items-start gap-2 rounded-xl bg-ochre-soft p-3.5 text-body-md text-ink">
+        <Hourglass size={18} className="mt-0.5 flex-none text-ochre-ink" aria-hidden="true" />
+        {fill(t('waitingBuyerConfirm'), { payout: egp(transaction.price_egp - transaction.seller_fee_egp) })}
+      </p>
+    );
+  }
+  if (transaction.kind === 'exchange') {
+    const mine = isBuyer ? transaction.buyer_confirmed_at : transaction.seller_confirmed_at;
+    const theirs = isBuyer ? transaction.seller_confirmed_at : transaction.buyer_confirmed_at;
+    const other = (isBuyer ? transaction.seller_name : transaction.buyer_name) || '';
+    if (!mine) return button(t('confirmSwap'));
+    return (
+      <ul className="mt-auto grid gap-1.5 rounded-xl bg-sunk p-3.5 text-body-md">
+        <li className="flex items-center gap-2 text-ink"><CheckCircle2 size={17} className="text-glaze-deep" aria-hidden="true" />{t('youConfirmed')}</li>
+        {theirs ? null : <li className="flex items-center gap-2 text-ink-2"><Hourglass size={17} className="text-ochre-ink" aria-hidden="true" />{fill(t('waitingFor'), { name: other })}</li>}
+      </ul>
+    );
+  }
+  return button(t('markComplete'));
 }
 
 function CardSkeletons({ label, count = 3, grid = false }: { label: string; count?: number; grid?: boolean }) {

@@ -6,7 +6,7 @@ import { useAuth } from '../auth';
 import { describeError } from '../errors';
 import { useLanguage } from '../i18n';
 import type { Language, MessageKey } from '../i18n';
-import type { Wallet } from '../types';
+import type { Wallet, WalletEntry } from '../types';
 import { Alert, FieldError } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
@@ -21,6 +21,10 @@ const MIN_TOPUP = 1;
 const MAX_TOPUP = 50_000;
 
 type Field = 'sender' | 'amount' | 'receipt';
+
+const entryLabels: Record<WalletEntry['kind'], MessageKey> = {
+  topup: 'entryTopup', hold: 'entryHold', refund: 'entryRefund', payout: 'entryPayout', fee: 'entryFee',
+};
 
 /** Mirrors the backend: accepts spaces/dashes and a +20 / 0020 prefix, returns 01XXXXXXXXX or null. */
 export function normalizeEgyptMobile(value: string): string | null {
@@ -82,6 +86,12 @@ export function WalletPage() {
             </div>
             <p className="relative mt-3 font-book text-display-lg-mobile font-bold text-glaze-deep md:text-display-lg">{formatEgp(wallet.balance_egp, language, t)}</p>
             <p className="relative mt-1 text-body-sm text-ink-3">{t('walletBalanceNote')}</p>
+            {wallet.held_egp > 0 ? (
+              <p className="relative mt-3 flex items-baseline justify-between gap-3 border-t border-line-strong/30 pt-3 text-body-md">
+                <span className="text-ink-2">{t('walletHeld')} <span className="text-body-sm text-ink-3">· {t('walletHeldNote')}</span></span>
+                <strong className="tabular-nums text-ink">{formatEgp(wallet.held_egp, language, t)}</strong>
+              </p>
+            ) : null}
           </section>
 
           <ChargingOptionCard recipient={recipient} />
@@ -89,6 +99,25 @@ export function WalletPage() {
 
         <TopupForm className="lg:col-span-7" onSubmitted={load} />
       </div>
+
+      {wallet.entries.length ? (
+        <section aria-labelledby="wallet-activity-heading">
+          <h2 id="wallet-activity-heading" className={cn(ui.blockTitle, 'text-ink')}>{t('walletActivity')}</h2>
+          <ul className={cn(ui.card, 'divide-y divide-line px-4 md:px-5')}>
+            {wallet.entries.map((entry) => (
+              <li key={entry.id} className="flex items-center justify-between gap-3 py-3">
+                <span className="grid">
+                  <span className="text-label-lg font-semibold text-ink">{t(entryLabels[entry.kind])}</span>
+                  <span className="text-body-sm text-ink-3">{formatDateTime(entry.created_at, language)}</span>
+                </span>
+                <bdi dir="ltr" className={cn('font-semibold tabular-nums', entry.amount_egp > 0 ? 'text-glaze-deep' : 'text-ink')}>
+                  {entry.amount_egp > 0 ? '+' : '−'}{formatEgp(Math.abs(entry.amount_egp), language, t)}
+                </bdi>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section aria-labelledby="topup-history-heading">
         <h2 id="topup-history-heading" className={cn(ui.blockTitle, 'text-ink')}>{t('topupHistory')}</h2>

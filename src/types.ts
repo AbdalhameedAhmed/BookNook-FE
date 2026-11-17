@@ -17,6 +17,15 @@ export type Listing = {
   created_at: string;
 };
 
+export type OfferedBook = {
+  listing_id: string;
+  title: string;
+  author: string | null;
+  condition: string | null;
+  status: string;
+  images: string[];
+};
+
 export type BookRequest = {
   id: string;
   listing_id: string;
@@ -25,6 +34,16 @@ export type BookRequest = {
   message: string;
   status: string;
   listing_title?: string | null;
+  /** The listing type at the time of the request. */
+  kind: ListingType;
+  price_egp: number;
+  /** The requester's platform fee. */
+  fee_egp: number;
+  /** Currently held from the requester's wallet (0 once accepted, refunded, or closed). */
+  held_egp: number;
+  buyer_name?: string | null;
+  /** Exchange requests: the requester's books on offer. */
+  offers: OfferedBook[];
 };
 
 export type Transaction = {
@@ -35,6 +54,34 @@ export type Transaction = {
   status: string;
   fulfillment_method: string;
   listing_title?: string | null;
+  kind: ListingType;
+  offered_listing_id: string | null;
+  offered_listing_title: string | null;
+  price_egp: number;
+  buyer_fee_egp: number;
+  seller_fee_egp: number;
+  buyer_held_egp: number;
+  seller_held_egp: number;
+  buyer_confirmed_at: string | null;
+  seller_confirmed_at: string | null;
+  buyer_name: string | null;
+  seller_name: string | null;
+  created_at?: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  transaction_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+};
+
+export type WalletEntry = {
+  id: string;
+  amount_egp: number;
+  kind: 'topup' | 'hold' | 'refund' | 'payout' | 'fee';
+  created_at: string;
 };
 
 export type ListingPayload = {
@@ -81,6 +128,10 @@ export type ChargingOption = { method: 'e_wallet'; recipient_number: string };
 
 export type Wallet = {
   balance_egp: number;
+  /** Taken from the balance for open requests and handovers; refunded or paid out later. */
+  held_egp: number;
+  entries: WalletEntry[];
+  platform_fee_egp: number;
   options: ChargingOption[];
   topups: WalletTopup[];
 };
@@ -103,4 +154,6 @@ export type AdminOverview = {
   topups_pending: number;
   topups_pending_egp: number;
   wallet_balance_total_egp: number;
+  held_total_egp: number;
+  platform_revenue_egp: number;
 };
