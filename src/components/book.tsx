@@ -101,7 +101,7 @@ export function TypeTag({ type, className }: { type: ListingType; className?: st
 }
 
 const statusDots: Record<string, string> = {
-  active: 'before:bg-glaze', accepted: 'before:bg-glaze', completed: 'before:bg-glaze',
+  active: 'before:bg-glaze', accepted: 'before:bg-glaze', completed: 'before:bg-glaze', approved: 'before:bg-glaze',
   pending: 'before:bg-ochre', arranging: 'before:bg-ochre', reserved: 'before:bg-ochre',
   sold: 'before:bg-cobalt', exchanged: 'before:bg-cobalt',
   rejected: 'before:bg-pom', removed: 'before:bg-pom', disputed: 'before:bg-pom',

@@ -1,4 +1,6 @@
-import type { AuthUser, Listing, ListingPayload, BookRequest, SessionResponse, Transaction } from './types';
+import type {
+  AdminOverview, AdminTopup, AuthUser, Listing, ListingPayload, BookRequest, SessionResponse, TopupStatus, Transaction, Wallet, WalletTopup,
+} from './types';
 import { ApiError, NetworkError, readDetail } from './errors';
 
 let unauthorizedHandler: (() => void) | null = null;
@@ -95,4 +97,21 @@ export const api = {
   reportListing: (token: string, id: string, reason: string, details: string | null) => apiRequest('/api/v1/reports', token, {
     method: 'POST', body: JSON.stringify({ listing_id: id, reason, details }),
   }),
+  wallet: (token: string) => apiRequest<Wallet>('/api/v1/wallet', token),
+  createTopup: (token: string, topup: { senderNumber: string; amountEgp: number; receipt: File }) => {
+    const body = new FormData();
+    body.append('method', 'e_wallet');
+    body.append('sender_number', topup.senderNumber);
+    body.append('amount_egp', String(topup.amountEgp));
+    body.append('receipt', topup.receipt);
+    return apiRequest<WalletTopup>('/api/v1/wallet/topups', token, { method: 'POST', body });
+  },
+  admin: {
+    overview: (token: string) => apiRequest<AdminOverview>('/api/v1/admin/overview', token),
+    topups: async (token: string, status: TopupStatus = 'pending') =>
+      (await apiRequest<{ items: AdminTopup[] }>(`/api/v1/admin/wallet-topups?status=${status}`, token)).items,
+    approveTopup: (token: string, id: string) => apiRequest<WalletTopup>(`/api/v1/admin/wallet-topups/${id}/approve`, token, { method: 'POST' }),
+    rejectTopup: (token: string, id: string, note: string) =>
+      apiRequest<WalletTopup>(`/api/v1/admin/wallet-topups/${id}/reject`, token, postJson({ note: note || null })),
+  },
 };

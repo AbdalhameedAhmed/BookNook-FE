@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Compass, Inbox, Library, Moon, Plus, PlusCircle, ShieldCheck, Sun, UserRound } from 'lucide-react';
+import { Compass, Inbox, Library, Moon, Plus, PlusCircle, ShieldCheck, ShieldHalf, Sun, UserRound } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { ProtectedRoute, useAuth } from './auth';
 import { RfoofWordmark } from './components/brand';
@@ -10,6 +10,8 @@ import ResetPassword from './pages/ResetPassword';
 import ConfirmEmail from './pages/ConfirmEmail';
 import ListingEditor from './pages/ListingEditor';
 import { AccountLayout, AccountOverview, MyBooksPage, RequestsPage, TransactionsPage } from './pages/Account';
+import { WalletPage } from './pages/Wallet';
+import { AdminLayout, AdminOverviewPage, AdminTopupsPage } from './pages/Admin';
 import { useLanguage } from './i18n';
 import { useTheme } from './theme';
 import { buttonClass } from './components/ui/button';
@@ -34,6 +36,11 @@ export default function App() {
           <Route path="requests" element={<RequestsPage />} />
           <Route path="handovers" element={<TransactionsPage />} />
           <Route path="transactions" element={<Navigate to="/account/handovers" replace />} />
+          <Route path="wallet" element={<WalletPage />} />
+        </Route>
+        <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+          <Route index element={<AdminOverviewPage />} />
+          <Route path="topups" element={<AdminTopupsPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
@@ -63,6 +70,7 @@ function SiteLayout() {
   }, [location.pathname, location.hash]);
 
   const displayName = session?.user.display_name || session?.user.email || '';
+  const isModerator = session?.user.role === 'moderator';
   const sellTarget = session ? '/sell' : '/signin';
   const sellState = session ? undefined : { from: '/sell' };
 
@@ -80,6 +88,7 @@ function SiteLayout() {
             <NavLink to="/" end className={topnavClass}>{t('navBrowse')}</NavLink>
             {session ? <NavLink to="/account/requests" className={topnavClass}>{t('navRequests')}</NavLink> : null}
             {session ? <NavLink to="/account" end className={topnavClass}>{t('navAccount')}</NavLink> : null}
+            {isModerator ? <NavLink to="/admin" className={topnavClass}>{t('navAdmin')}</NavLink> : null}
           </nav>
           <div className="ms-auto flex items-center gap-2">
             {session
@@ -146,6 +155,7 @@ function SiteLayout() {
           <>
             <NavLink to="/account/requests" className={tabbarClass}><Inbox size={22} aria-hidden="true" /><span>{t('navRequests')}</span></NavLink>
             <NavLink to="/account" end className={tabbarClass}><UserRound size={22} aria-hidden="true" /><span>{t('navAccount')}</span></NavLink>
+            {isModerator ? <NavLink to="/admin" className={tabbarClass}><ShieldHalf size={22} aria-hidden="true" /><span>{t('navAdmin')}</span></NavLink> : null}
           </>
         ) : (
           <NavLink to="/signin" className={tabbarClass}><UserRound size={22} aria-hidden="true" /><span>{t('signIn')}</span></NavLink>

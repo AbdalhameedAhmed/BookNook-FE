@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   ArrowDownToLine, ArrowRight, ArrowUpFromLine, BookOpen, Check, CheckCircle2, ChevronRight, Handshake, Inbox,
-  LayoutDashboard, Leaf, Library, LogOut, Mail, MapPin, Pencil, Plus, Quote, Send, ShieldCheck,
+  LayoutDashboard, Leaf, Library, LogOut, Mail, MapPin, Pencil, Plus, Quote, Send, ShieldCheck, Wallet,
 } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
@@ -41,6 +41,7 @@ export function AccountLayout() {
     { to: '/account/books', label: t('myBooks'), icon: BookOpen },
     { to: '/account/requests', label: t('requests'), icon: Inbox },
     { to: '/account/handovers', label: t('transactions'), icon: Handshake },
+    { to: '/account/wallet', label: t('wallet'), icon: Wallet },
   ];
 
   const signOut = async () => {

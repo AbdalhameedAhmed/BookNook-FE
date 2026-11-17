@@ -4,6 +4,7 @@ import { detailMessages } from './messages/detail';
 import { authMessages as authPageMessages } from './messages/auth';
 import { editorMessages } from './messages/editor';
 import { accountMessages } from './messages/account';
+import { walletMessages } from './messages/wallet';
 
 const baseMessages = {
   en: {
@@ -50,8 +51,8 @@ const authMessages = {
 } as const;
 
 const messages = {
-  en: { ...baseMessages.en, ...authMessages.en, ...shellMessages.en, ...detailMessages.en, ...authPageMessages.en, ...editorMessages.en, ...accountMessages.en },
-  ar: { ...baseMessages.ar, ...authMessages.ar, ...shellMessages.ar, ...detailMessages.ar, ...authPageMessages.ar, ...editorMessages.ar, ...accountMessages.ar },
+  en: { ...baseMessages.en, ...authMessages.en, ...shellMessages.en, ...detailMessages.en, ...authPageMessages.en, ...editorMessages.en, ...accountMessages.en, ...walletMessages.en },
+  ar: { ...baseMessages.ar, ...authMessages.ar, ...shellMessages.ar, ...detailMessages.ar, ...authPageMessages.ar, ...editorMessages.ar, ...accountMessages.ar, ...walletMessages.ar },
 } as const;
 
 export type Language = keyof typeof messages;
@@ -116,6 +117,7 @@ export function formatStatus(value: string, t: (key: MessageKey) => string) {
     removed: 'statusRemoved',
     disputed: 'statusDisputed',
     expired: 'statusExpired',
+    approved: 'statusApproved',
   };
   return statusKeys[value] ? t(statusKeys[value]) : value;
 }

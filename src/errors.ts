@@ -26,6 +26,11 @@ const knownDetails: Record<string, MessageKey> = {
   'Invalid login credentials': 'errorInvalidLogin',
   'Email not confirmed': 'errorEmailNotConfirmed',
   'Too many attempts. Please wait and try again.': 'errorRateLimit',
+  'Receipt images must be 5 MB or smaller': 'receiptTooLarge',
+  'Enter a valid Egyptian mobile number, like 01012345678': 'fieldMobile',
+  'You have too many top-ups waiting for review': 'errorTooManyTopups',
+  'Only pending top-ups can be reviewed': 'errorTopupReviewed',
+  'Moderator access required': 'errorForbidden',
 };
 
 const statusMessages: Record<number, MessageKey> = {

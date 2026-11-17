@@ -62,3 +62,45 @@ export type SessionResponse = {
   expires_in: number;
   user: AuthUser;
 };
+
+export type TopupStatus = 'pending' | 'approved' | 'rejected';
+
+export type WalletTopup = {
+  id: string;
+  method: 'e_wallet';
+  sender_number: string;
+  recipient_number: string;
+  amount_egp: number;
+  status: TopupStatus;
+  review_note: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+};
+
+export type ChargingOption = { method: 'e_wallet'; recipient_number: string };
+
+export type Wallet = {
+  balance_egp: number;
+  options: ChargingOption[];
+  topups: WalletTopup[];
+};
+
+/** A top-up as moderators see it: includes who sent it and a short-lived receipt link. */
+export type AdminTopup = WalletTopup & {
+  user_id: string;
+  user_email: string | null;
+  receipt_url: string | null;
+};
+
+export type AdminOverview = {
+  users_total: number;
+  listings_active: number;
+  listings_total: number;
+  requests_pending: number;
+  transactions_arranging: number;
+  transactions_completed: number;
+  reports_open: number;
+  topups_pending: number;
+  topups_pending_egp: number;
+  wallet_balance_total_egp: number;
+};
