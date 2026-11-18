@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  BookOpen, ChevronRight, Coins, ExternalLink, Flag, Handshake, Hourglass, Inbox, LayoutDashboard, ReceiptText, Repeat, ShieldCheck, Users, Wallet,
+  BookOpen, ChevronRight, Coins, ExternalLink, Flag, Handshake, Hourglass, Inbox, LayoutDashboard, ReceiptText, Repeat, ShieldCheck, TicketPercent, Users, Wallet,
 } from 'lucide-react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { describeError } from '../errors';
 import { useLanguage } from '../i18n';
-import type { AdminOverview, AdminTopup, Transaction } from '../types';
+import type { AdminOverview, AdminTopup, PromoCode, Transaction } from '../types';
+import type { MessageKey } from '../i18n';
+import { FieldError } from '../components/ui/alert';
+import { fill } from '../components/deals';
 import { Alert } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { Dialog, useConfirm } from '../components/ui/dialog';
@@ -35,6 +38,7 @@ export function AdminLayout() {
     { to: '/admin', label: t('adminOverviewTab'), icon: LayoutDashboard, end: true },
     { to: '/admin/topups', label: t('adminPendingTab'), icon: ReceiptText },
     { to: '/admin/handovers', label: t('adminHandoversTab'), icon: Handshake },
+    { to: '/admin/promos', label: t('adminPromosTab'), icon: TicketPercent },
   ];
 
   return (
@@ -316,6 +320,145 @@ export function AdminHandoversPage() {
               </li>
             );
           })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+type PromoField = 'code' | 'discount' | 'maxUses';
+
+export function AdminPromosPage() {
+  const { session } = useAuth();
+  const { t, language } = useLanguage();
+  const toast = useToast();
+  const [items, setItems] = useState<PromoCode[] | null>(null);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [discount, setDiscount] = useState('');
+  const [maxUses, setMaxUses] = useState('');
+  const [errors, setErrors] = useState<Partial<Record<PromoField, MessageKey>>>({});
+  const [creating, setCreating] = useState(false);
+
+  const load = useCallback(() => {
+    let active = true;
+    const token = session?.access_token;
+    if (!token) return () => { active = false; };
+    setError('');
+    api.admin.promoCodes(token)
+      .then((next) => { if (active) setItems(next); })
+      .catch((reason) => { if (active) setError(describeError(reason, t, 'adminLoadError')); });
+    return () => { active = false; };
+  }, [session?.access_token, t]);
+
+  useEffect(() => load(), [load]);
+
+  const create = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const discountEgp = Number(discount);
+    const uses = Number(maxUses);
+    const next: Partial<Record<PromoField, MessageKey>> = {};
+    if (!/^[A-Za-z0-9_-]{3,32}$/.test(code.trim())) next.code = 'fieldPromoCode';
+    if (!Number.isInteger(discountEgp) || discountEgp < 1 || discountEgp > 10000) next.discount = 'fieldPromoDiscount';
+    if (!Number.isInteger(uses) || uses < 1) next.maxUses = 'fieldPromoMaxUses';
+    setErrors(next);
+    const firstInvalid = (['code', 'discount', 'maxUses'] as PromoField[]).find((field) => next[field]);
+    if (firstInvalid) { document.getElementById(`promo-${firstInvalid}`)?.focus(); return; }
+    if (!session) return;
+    setCreating(true);
+    try {
+      const created = await api.admin.createPromo(session.access_token, { code: code.trim(), discountEgp, maxUses: uses });
+      setItems((current) => [created, ...(current ?? [])]);
+      setCode(''); setDiscount(''); setMaxUses('');
+      toast.success(t('promoCreated'));
+    } catch (reason) {
+      toast.error(t('promoCreateFailed'), describeError(reason, t, 'promoCreateFailed'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const toggle = async (promo: PromoCode) => {
+    if (!session) return;
+    setBusyId(promo.id);
+    try {
+      await api.admin.setPromoActive(session.access_token, promo.id, !promo.active);
+      setItems((current) => current?.map((item) => (item.id === promo.id ? { ...item, active: !promo.active } : item)) ?? null);
+      toast.success(t('promoUpdated'));
+    } catch (reason) {
+      toast.error(t('promoUpdateFailed'), describeError(reason, t, 'promoUpdateFailed'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const invalid = (field: PromoField) => ({
+    'aria-invalid': errors[field] ? true : undefined,
+    'aria-describedby': errors[field] ? `promo-${field}-error` : undefined,
+  });
+
+  return (
+    <section className="grid gap-6" aria-labelledby="admin-promos-heading">
+      <div>
+        <h2 id="admin-promos-heading" className="font-book text-headline-sm font-semibold text-ink ar:leading-[1.5]">{t('adminPromosTab')}</h2>
+        <p className={cn('text-body-sm text-ink-2', ui.measure)}>{t('adminPromosCopy')}</p>
+      </div>
+
+      <form className={cn(ui.card, 'grid gap-4 p-4 md:p-5')} onSubmit={(event) => void create(event)} noValidate aria-labelledby="new-promo-heading">
+        <h3 id="new-promo-heading" className="text-title-md font-semibold text-ink">{t('newPromo')}</h3>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <label className={ui.field} htmlFor="promo-code">
+            <span className={ui.label}>{t('promoCodeLabel')}</span>
+            <input id="promo-code" className={cn(ui.control, 'uppercase')} dir="ltr" maxLength={32} autoComplete="off" value={code}
+              onChange={(event) => { setCode(event.target.value); setErrors((e) => ({ ...e, code: undefined })); }} {...invalid('code')} />
+            {errors.code ? <FieldError id="promo-code-error">{t(errors.code)}</FieldError> : <span className={ui.hint}>{t('promoCodeHint')}</span>}
+          </label>
+          <label className={ui.field} htmlFor="promo-discount">
+            <span className={ui.label}>{t('promoDiscountLabel')}</span>
+            <span className="relative">
+              <input id="promo-discount" className={cn(ui.control, 'pe-14')} type="number" inputMode="numeric" min={1} max={10000} step={1} value={discount}
+                onChange={(event) => { setDiscount(event.target.value); setErrors((e) => ({ ...e, discount: undefined })); }} {...invalid('discount')} />
+              <span className="pointer-events-none absolute inset-y-0 end-4 flex items-center text-label-md font-semibold text-ink-3">{t('egpSuffix')}</span>
+            </span>
+            <FieldError id="promo-discount-error">{errors.discount ? t(errors.discount) : null}</FieldError>
+          </label>
+          <label className={ui.field} htmlFor="promo-maxUses">
+            <span className={ui.label}>{t('promoMaxUsesLabel')}</span>
+            <input id="promo-maxUses" className={ui.control} type="number" inputMode="numeric" min={1} step={1} value={maxUses}
+              onChange={(event) => { setMaxUses(event.target.value); setErrors((e) => ({ ...e, maxUses: undefined })); }} {...invalid('maxUses')} />
+            {errors.maxUses ? <FieldError id="promo-maxUses-error">{t(errors.maxUses)}</FieldError> : <span className={ui.hint}>{t('promoMaxUsesHint')}</span>}
+          </label>
+        </div>
+        <Button type="submit" className="justify-self-start" loading={creating}>{t('createPromo')}</Button>
+      </form>
+
+      {error ? <Alert title={t('adminLoadError')} onRetry={load} retryLabel={t('tryAgain')}>{error}</Alert> : !items ? (
+        <div className="grid gap-3" aria-busy="true">{[0, 1].map((key) => <span key={key} className={cn(ui.skeleton, 'h-20 rounded-card')} />)}</div>
+      ) : items.length === 0 ? <EmptyState size="compact" icon={<TicketPercent size={22} />} title={t('noPromos')} /> : (
+        <ul className="grid gap-3">
+          {items.map((promo) => (
+            <li key={promo.id} className={cn(ui.card, 'flex flex-wrap items-center justify-between gap-3 p-4 md:p-5', !promo.active && 'opacity-75')}>
+              <div className="grid min-w-0 gap-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <bdi dir="ltr" className="font-mono text-title-md font-bold tracking-wide text-ink">{promo.code}</bdi>
+                  <span className="text-label-lg font-semibold text-glaze-deep">−{formatEgp(promo.discount_egp, language, t)}</span>
+                  <span className={cn('rounded-full px-2 py-0.5 text-label-sm font-semibold', promo.active ? 'bg-glaze-soft text-glaze-deep' : 'bg-sunk-2 text-ink-3')}>
+                    {promo.active ? t('promoActive') : t('promoInactive')}
+                  </span>
+                </span>
+                <span className="text-body-sm text-ink-2">
+                  {fill(t('promoUsage'), { used: promo.uses_count, max: promo.max_uses })} · {fill(t('promoGiven'), { amount: formatEgp(promo.discount_given_egp, language, t) })}
+                </span>
+                <span className="h-1.5 w-48 max-w-full overflow-hidden rounded-full bg-sunk-2" aria-hidden="true">
+                  <span className="block h-full bg-glaze" style={{ width: `${Math.min(100, (promo.uses_count / promo.max_uses) * 100)}%` }} />
+                </span>
+              </div>
+              <Button variant={promo.active ? 'danger-quiet' : 'secondary'} size="sm" loading={busyId === promo.id} disabled={busyId !== null} onClick={() => void toggle(promo)}>
+                {promo.active ? t('promoTurnOff') : t('promoTurnOn')}
+              </Button>
+            </li>
+          ))}
         </ul>
       )}
     </section>

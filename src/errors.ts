@@ -40,6 +40,10 @@ const knownDetails: Record<string, MessageKey> = {
   'You already confirmed this handover': 'errorAlreadyConfirmed',
   'This book is in an open handover. Finish or cancel the handover first.': 'errorListingInHandover',
   'This handover is closed': 'chatClosed',
+  "This promo code isn't valid": 'errorPromoInvalid',
+  'This promo code has been fully used': 'errorPromoExhausted',
+  'Promo codes only apply to sale and exchange fees': 'errorPromoNotApplicable',
+  'A promo code with this name already exists': 'errorPromoTaken',
 };
 
 const statusMessages: Record<number, MessageKey> = {

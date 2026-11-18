@@ -4,7 +4,7 @@ import { Ban, BookX, Camera, ChevronRight, EyeOff, Flag, HandHeart, Handshake, I
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
-import type { Listing } from '../types';
+import type { Listing, PromoPreview } from '../types';
 import { formatCondition, formatMeetup, useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { describeError, isNotFound } from '../errors';
@@ -15,7 +15,7 @@ import { Dialog, dialogFooter } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 import { BookCover, StatusPill, TypeTag, coverSkeleton } from '../components/book';
-import { CostBreakdown, TopUpNotice, fill, useEgp } from '../components/deals';
+import { CostBreakdown, PromoCodeField, TopUpNotice, fill, useEgp } from '../components/deals';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
@@ -75,6 +75,7 @@ export default function BookDetail() {
   const [balance, setBalance] = useState<number | null>(null);
   const [myBooks, setMyBooks] = useState<Listing[] | null>(null);
   const [offered, setOffered] = useState<string[]>([]);
+  const [promo, setPromo] = useState<PromoPreview | null>(null);
 
   const load = useCallback(() => {
     let active = true;
@@ -143,7 +144,8 @@ export default function BookDetail() {
 
   const isExchange = listing.listing_type === 'exchange';
   const salePrice = listing.listing_type === 'sale' ? listing.price_egp ?? 0 : 0;
-  const amountNeeded = fee === null ? null : needsWallet ? salePrice + fee : 0;
+  const discount = promo && fee !== null ? Math.min(promo.discount_egp, fee) : 0;
+  const amountNeeded = fee === null ? null : needsWallet ? salePrice + fee - discount : 0;
   const walletReady = !needsWallet || (balance !== null && amountNeeded !== null && (!isExchange || myBooks !== null));
   const shortOfMoney = needsWallet && balance !== null && amountNeeded !== null && balance < amountNeeded;
   const missingOffer = needsWallet && isExchange && offered.length === 0;
@@ -162,11 +164,12 @@ export default function BookDetail() {
     setSubmitting(true);
     setRequestError('');
     try {
-      await api.createRequest(session.access_token, listing.id, message.trim() || 'I’m interested in this book.', isExchange ? offered : []);
+      await api.createRequest(session.access_token, listing.id, message.trim() || 'I’m interested in this book.', isExchange ? offered : [], promo?.code);
       toast.success(t('requestSentTitle'), t('requestSent'));
       setRequestSent(true);
       setMessage('');
       setOffered([]);
+      setPromo(null);
     } catch (reason) {
       setRequestError(describeError(reason, t, 'requestError'));
     } finally {
@@ -355,9 +358,14 @@ export default function BookDetail() {
                 ) : null}
                 {needsWallet && fee !== null && balance !== null ? (
                   <div className="grid gap-2">
+                    {fee > 0 ? <PromoCodeField id="request-promo" applied={promo} onChange={setPromo} /> : null}
                     <CostBreakdown
-                      rows={isExchange ? [] : [{ label: t('bookPrice'), amount: salePrice }, { label: t('rfoofFee'), amount: fee }]}
-                      total={{ label: isExchange ? t('rfoofFee') : t('totalHeld'), amount: amountNeeded ?? 0 }}
+                      rows={[
+                        ...(isExchange ? [] : [{ label: t('bookPrice'), amount: salePrice }]),
+                        ...(isExchange && !promo ? [] : [{ label: t('rfoofFee'), amount: fee }]),
+                        ...(promo ? [{ label: fill(t('promoDiscount'), { code: promo.code }), amount: -discount }] : []),
+                      ]}
+                      total={{ label: isExchange && !promo ? t('rfoofFee') : t('totalHeld'), amount: amountNeeded ?? 0 }}
                       balance={balance}
                     />
                     {shortOfMoney

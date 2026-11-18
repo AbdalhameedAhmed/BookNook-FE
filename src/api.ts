@@ -1,5 +1,6 @@
 import type {
-  AdminOverview, AdminTopup, AuthUser, ChatMessage, Listing, ListingPayload, BookRequest, SessionResponse, TopupStatus, Transaction, Wallet, WalletTopup,
+  AdminOverview, AdminTopup, AuthUser, ChatMessage, Listing, ListingPayload, BookRequest, PromoCode, PromoPreview, SessionResponse, TopupStatus,
+  Transaction, Wallet, WalletTopup,
 } from './types';
 import { ApiError, NetworkError, readDetail } from './errors';
 
@@ -82,12 +83,14 @@ export const api = {
   markListingComplete: (token: string, id: string) => apiRequest<{ status: string }>(`/api/v1/listings/${id}/mark-complete`, token, { method: 'POST' }),
   fees: () => apiRequest<{ platform_fee_egp: number }>('/api/v1/fees'),
   /** Sale: holds price + fee from the wallet. Exchange: holds the fee; `offeredListingIds` are the requester's own books. */
-  createRequest: (token: string, id: string, message: string, offeredListingIds: string[] = []) => apiRequest<BookRequest>(`/api/v1/listings/${id}/requests`, token, {
-    method: 'POST', body: JSON.stringify({ message, offered_listing_ids: offeredListingIds }),
+  createRequest: (token: string, id: string, message: string, offeredListingIds: string[] = [], promoCode?: string) => apiRequest<BookRequest>(`/api/v1/listings/${id}/requests`, token, {
+    method: 'POST', body: JSON.stringify({ message, offered_listing_ids: offeredListingIds, promo_code: promoCode ?? null }),
   }),
-  updateRequest: (token: string, id: string, status: string, chosenListingId?: string) => apiRequest<BookRequest>(`/api/v1/requests/${id}`, token, {
-    method: 'PATCH', body: JSON.stringify({ status, chosen_listing_id: chosenListingId ?? null }),
+  updateRequest: (token: string, id: string, status: string, chosenListingId?: string, promoCode?: string) => apiRequest<BookRequest>(`/api/v1/requests/${id}`, token, {
+    method: 'PATCH', body: JSON.stringify({ status, chosen_listing_id: chosenListingId ?? null, promo_code: promoCode ?? null }),
   }),
+  /** Previews a promo code's discount. Does not use it up. */
+  checkPromo: (token: string, code: string) => apiRequest<PromoPreview>(`/api/v1/promo-codes/${encodeURIComponent(code.trim())}`, token),
   messages: async (token: string, transactionId: string) =>
     (await apiRequest<{ items: ChatMessage[] }>(`/api/v1/transactions/${transactionId}/messages`, token)).items,
   sendMessage: (token: string, transactionId: string, body: string) =>
@@ -124,5 +127,10 @@ export const api = {
       (await apiRequest<{ items: Transaction[] }>('/api/v1/admin/transactions?status=arranging', token)).items,
     cancelTransaction: (token: string, id: string) =>
       apiRequest<Transaction>(`/api/v1/admin/transactions/${id}/cancel`, token, { method: 'POST' }),
+    promoCodes: async (token: string) => (await apiRequest<{ items: PromoCode[] }>('/api/v1/admin/promo-codes', token)).items,
+    createPromo: (token: string, promo: { code: string; discountEgp: number; maxUses: number }) =>
+      apiRequest<PromoCode>('/api/v1/admin/promo-codes', token, postJson({ code: promo.code, discount_egp: promo.discountEgp, max_uses: promo.maxUses })),
+    setPromoActive: (token: string, id: string, active: boolean) =>
+      apiRequest<PromoCode>(`/api/v1/admin/promo-codes/${id}`, token, { method: 'PATCH', body: JSON.stringify({ active }) }),
   },
 };

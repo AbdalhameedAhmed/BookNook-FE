@@ -7,7 +7,7 @@ import {
 import { Link, Navigate, NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
-import type { BookRequest, Listing, Transaction } from '../types';
+import type { BookRequest, Listing, PromoPreview, Transaction } from '../types';
 import { formatCondition, formatMeetup, formatStatus, useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { describeError } from '../errors';
@@ -18,7 +18,7 @@ import { useConfirm } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 import { BookCover, StatusPill, typeTones } from '../components/book';
-import { ChatThread, TopUpNotice, fill, useEgp } from '../components/deals';
+import { ChatThread, PromoCodeField, TopUpNotice, fill, useEgp } from '../components/deals';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
@@ -431,6 +431,8 @@ export function RequestsPage() {
   const [wallet, setWallet] = useState<{ balance: number; fee: number } | null>(null);
   /** Exchange requests: which offered book the owner picked, by request id. */
   const [chosen, setChosen] = useState<Record<string, string>>({});
+  /** Promo codes the seller/owner applied before accepting, by request id. */
+  const [promos, setPromos] = useState<Record<string, PromoPreview | null>>({});
   const egp = useEgp();
 
   const reload = useCallback(async () => {
@@ -460,7 +462,8 @@ export function RequestsPage() {
     if (!confirmed) return;
     setBusyId(request.id);
     try {
-      await api.updateRequest(session.access_token, request.id, status, status === 'accepted' ? chosen[request.id] : undefined);
+      await api.updateRequest(session.access_token, request.id, status, status === 'accepted' ? chosen[request.id] : undefined,
+        status === 'accepted' ? promos[request.id]?.code : undefined);
       toast.success(t('requestUpdated'), t(copy.done));
       await reload();
     } catch (reason) {
@@ -482,8 +485,12 @@ export function RequestsPage() {
     const closed = request.status !== 'pending' && request.status !== 'accepted';
     const pending = request.status === 'pending';
     const isSwap = request.kind === 'exchange';
-    const fee = wallet?.fee ?? 0;
+    const promo = promos[request.id] ?? null;
+    // The seller/owner's own fee for this request, after any promo they applied.
+    const baseFee = request.kind === 'sale' ? Math.min(wallet?.fee ?? 0, request.price_egp) : wallet?.fee ?? 0;
+    const fee = Math.max(baseFee - (promo?.discount_egp ?? 0), 0);
     const ownerShort = isIncoming && isSwap && wallet !== null && wallet.balance < fee;
+    const paidKind = request.kind === 'sale' || isSwap;
     const cannotAccept = isSwap && (!chosen[request.id] || ownerShort);
     return (
       <li key={request.id} className={cn(ui.card, 'grid gap-4 p-4 md:p-6', closed && 'bg-surface/60 opacity-80 shadow-none')}>
@@ -543,12 +550,15 @@ export function RequestsPage() {
         ) : null}
         {pending && isIncoming && request.kind === 'sale' ? (
           <p className="rounded-xl bg-cobalt-soft p-3.5 text-body-md text-ink">
-            {fill(t('sellerPayoutNote'), { payout: egp(Math.max(request.price_egp - fee, 0)), price: egp(request.price_egp), fee: egp(Math.min(fee, request.price_egp)) })}
+            {fill(t('sellerPayoutNote'), { payout: egp(request.price_egp - fee), price: egp(request.price_egp), fee: egp(fee) })}
           </p>
         ) : null}
         {pending && isIncoming && isSwap && wallet ? (ownerShort
           ? <TopUpNotice title={t('insufficientTitle')}>{fill(t('ownerFeeShort'), { fee: egp(fee), have: egp(wallet.balance) })}</TopUpNotice>
           : <p className="rounded-xl bg-cobalt-soft p-3.5 text-body-md text-ink">{fill(t('ownerFeeNote'), { fee: egp(fee), have: egp(wallet.balance) })}</p>
+        ) : null}
+        {pending && isIncoming && paidKind && baseFee > 0 ? (
+          <PromoCodeField id={`promo-${request.id}`} applied={promo} onChange={(next) => setPromos((current) => ({ ...current, [request.id]: next }))} />
         ) : null}
         {pending && !isIncoming && request.held_egp > 0 ? (
           <p className="rounded-xl bg-sunk p-3.5 text-body-md text-ink-2">{fill(t('heldForRequest'), { amount: egp(request.held_egp) })}</p>
@@ -732,6 +742,9 @@ function HandoverMoney({ transaction, isBuyer }: { transaction: Transaction; isB
         <span className="text-ink-2">{isBuyer ? t('youPay') : t('youGet')}</span>
         <span className="text-end"><strong className="font-book text-title-lg text-ink">{egp(amount)}</strong>
           <span className="block text-body-sm text-ink-3">{egp(transaction.price_egp)} {isBuyer ? '+' : '−'} {t('rfoofFee')} {egp(isBuyer ? transaction.buyer_fee_egp : transaction.seller_fee_egp)}</span>
+          {(isBuyer ? transaction.buyer_discount_egp : transaction.seller_discount_egp) ? (
+            <span className="block text-body-sm font-semibold text-glaze-deep">{fill(t('promoDiscount'), { code: '' }).trim()} −{egp((isBuyer ? transaction.buyer_discount_egp : transaction.seller_discount_egp) ?? 0)}</span>
+          ) : null}
         </span>
       </p>
     );

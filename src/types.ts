@@ -41,6 +41,8 @@ export type BookRequest = {
   fee_egp: number;
   /** Currently held from the requester's wallet (0 once accepted, refunded, or closed). */
   held_egp: number;
+  /** Promo discount already taken off `fee_egp`. */
+  fee_discount_egp?: number;
   buyer_name?: string | null;
   /** Exchange requests: the requester's books on offer. */
   offers: OfferedBook[];
@@ -64,6 +66,9 @@ export type Transaction = {
   seller_held_egp: number;
   buyer_confirmed_at: string | null;
   seller_confirmed_at: string | null;
+  /** Promo discounts already taken off each side's fee. */
+  buyer_discount_egp?: number;
+  seller_discount_egp?: number;
   buyer_name: string | null;
   seller_name: string | null;
   created_at?: string;
@@ -156,4 +161,19 @@ export type AdminOverview = {
   wallet_balance_total_egp: number;
   held_total_egp: number;
   platform_revenue_egp: number;
+};
+
+/** Result of checking a promo code before using it. */
+export type PromoPreview = { code: string; discount_egp: number };
+
+export type PromoCode = {
+  id: string;
+  code: string;
+  discount_egp: number;
+  /** Number of book deals the code can be used on, across all users. */
+  max_uses: number;
+  uses_count: number;
+  discount_given_egp: number;
+  active: boolean;
+  created_at: string;
 };

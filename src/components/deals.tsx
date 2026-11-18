@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { MessageCircle, Send, ShieldCheck, Wallet as WalletIcon } from 'lucide-react';
+import { MessageCircle, Send, ShieldCheck, TicketPercent, Wallet as WalletIcon, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { describeError } from '../errors';
 import { useLanguage } from '../i18n';
-import type { ChatMessage } from '../types';
+import type { ChatMessage, PromoPreview } from '../types';
 import { Button, buttonClass } from './ui/button';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
@@ -35,7 +35,7 @@ export function CostBreakdown({ rows, total, balance }: {
       {rows.map((row) => (
         <div key={row.label} className="flex items-baseline justify-between gap-3">
           <dt className="text-ink-2">{row.label}</dt>
-          <dd className="tabular-nums text-ink">{egp(row.amount)}</dd>
+          <dd className={cn('tabular-nums', row.amount < 0 ? 'font-semibold text-glaze-deep' : 'text-ink')}>{row.amount < 0 ? `−${egp(-row.amount)}` : egp(row.amount)}</dd>
         </div>
       ))}
       <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-line-strong/40 pt-2">
@@ -154,5 +154,57 @@ export function ChatThread({ transactionId, otherName, canSend }: { transactionI
       ) : <p className="text-body-sm text-ink-3">{t('chatClosed')}</p>}
       <p className="flex items-center gap-1.5 text-label-sm text-ink-3"><ShieldCheck size={14} aria-hidden="true" />{t('chatSafety')}</p>
     </section>
+  );
+}
+
+/**
+ * Optional promo code input. "Apply" only previews the discount; the code is used
+ * when the request is sent or accepted, and given back if the deal is refunded.
+ */
+export function PromoCodeField({ id, applied, onChange }: { id: string; applied: PromoPreview | null; onChange: (promo: PromoPreview | null) => void }) {
+  const { session } = useAuth();
+  const { t } = useLanguage();
+  const egp = useEgp();
+  const [draft, setDraft] = useState('');
+  const [error, setError] = useState('');
+  const [checking, setChecking] = useState(false);
+
+  const apply = async () => {
+    const code = draft.trim();
+    if (!session || !code) return;
+    setChecking(true);
+    setError('');
+    try {
+      onChange(await api.checkPromo(session.access_token, code));
+      setDraft('');
+    } catch (reason) {
+      setError(describeError(reason, t, 'errorPromoInvalid'));
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  if (applied) {
+    return (
+      <p className="flex items-center justify-between gap-2 rounded-xl border border-glaze/40 bg-glaze-soft/40 px-3 py-2 text-body-sm text-ink" role="status">
+        <span className="flex items-center gap-2"><TicketPercent size={17} className="flex-none text-glaze-deep" aria-hidden="true" />{fill(t('promoApplied'), { code: applied.code, amount: egp(applied.discount_egp) })}</span>
+        <Button variant="ghost" size="sm" className="min-h-9 flex-none px-2" onClick={() => onChange(null)} aria-label={t('promoRemove')}><X size={16} aria-hidden="true" /></Button>
+      </p>
+    );
+  }
+  return (
+    <div className="grid gap-1">
+      <label className="text-label-md font-medium text-ink-2" htmlFor={id}>{t('promoCode')} <span className={ui.optional}>{t('optional')}</span></label>
+      <div className="flex gap-2">
+        <input
+          id={id} className={cn(ui.control, 'min-h-11 py-2 uppercase')} value={draft} maxLength={32} autoComplete="off" spellCheck={false}
+          placeholder={t('promoPlaceholder')} onChange={(event) => { setDraft(event.target.value); setError(''); }}
+          onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void apply(); } }}
+          aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : `${id}-hint`}
+        />
+        <Button variant="secondary" className="min-h-11 flex-none rounded-xl" onClick={() => void apply()} loading={checking} disabled={!draft.trim()}>{t('promoApply')}</Button>
+      </div>
+      {error ? <p id={`${id}-error`} className="text-body-sm text-pom" role="alert">{error}</p> : <p id={`${id}-hint`} className={ui.hint}>{t('promoHint')}</p>}
+    </div>
   );
 }

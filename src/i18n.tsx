@@ -6,6 +6,7 @@ import { editorMessages } from './messages/editor';
 import { accountMessages } from './messages/account';
 import { walletMessages } from './messages/wallet';
 import { dealMessages } from './messages/deals';
+import { promoMessages } from './messages/promos';
 
 const baseMessages = {
   en: {
@@ -52,8 +53,8 @@ const authMessages = {
 } as const;
 
 const messages = {
-  en: { ...baseMessages.en, ...authMessages.en, ...shellMessages.en, ...detailMessages.en, ...authPageMessages.en, ...editorMessages.en, ...accountMessages.en, ...walletMessages.en, ...dealMessages.en },
-  ar: { ...baseMessages.ar, ...authMessages.ar, ...shellMessages.ar, ...detailMessages.ar, ...authPageMessages.ar, ...editorMessages.ar, ...accountMessages.ar, ...walletMessages.ar, ...dealMessages.ar },
+  en: { ...baseMessages.en, ...authMessages.en, ...shellMessages.en, ...detailMessages.en, ...authPageMessages.en, ...editorMessages.en, ...accountMessages.en, ...walletMessages.en, ...dealMessages.en, ...promoMessages.en },
+  ar: { ...baseMessages.ar, ...authMessages.ar, ...shellMessages.ar, ...detailMessages.ar, ...authPageMessages.ar, ...editorMessages.ar, ...accountMessages.ar, ...walletMessages.ar, ...dealMessages.ar, ...promoMessages.ar },
 } as const;
 
 export type Language = keyof typeof messages;
