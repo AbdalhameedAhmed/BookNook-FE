@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Copy, ImageUp, ReceiptText, RefreshCw, Smartphone, Wallet as WalletIcon } from 'lucide-react';
+import { Copy, Hourglass, ImageUp, ReceiptText, RefreshCw, Smartphone, Wallet as WalletIcon } from 'lucide-react';
+import { fill } from '../components/deals';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { describeError } from '../errors';
@@ -72,6 +73,7 @@ export function WalletPage() {
     );
   }
 
+  const pendingTopups = wallet.topups.filter((topup) => topup.status === 'pending').reduce((sum, topup) => sum + topup.amount_egp, 0);
   const recipient = wallet.options.find((option) => option.method === 'e_wallet')?.recipient_number ?? '';
 
   return (
@@ -86,6 +88,12 @@ export function WalletPage() {
             </div>
             <p className="relative mt-3 font-book text-display-lg-mobile font-bold text-glaze-deep md:text-display-lg">{formatEgp(wallet.balance_egp, language, t)}</p>
             <p className="relative mt-1 text-body-sm text-ink-3">{t('walletBalanceNote')}</p>
+            {pendingTopups > 0 ? (
+              <p className="relative mt-3 flex items-center gap-2 rounded-lg bg-ochre-soft px-3 py-2 text-body-sm text-ink" role="status">
+                <Hourglass size={16} className="flex-none text-ochre-ink" aria-hidden="true" />
+                {fill(t('walletPendingReview'), { amount: formatEgp(pendingTopups, language, t) })}
+              </p>
+            ) : null}
             {wallet.held_egp > 0 ? (
               <p className="relative mt-3 flex items-baseline justify-between gap-3 border-t border-line-strong/30 pt-3 text-body-md">
                 <span className="text-ink-2">{t('walletHeld')} <span className="text-body-sm text-ink-3">· {t('walletHeldNote')}</span></span>
@@ -106,8 +114,9 @@ export function WalletPage() {
           <ul className={cn(ui.card, 'divide-y divide-line px-4 md:px-5')}>
             {wallet.entries.map((entry) => (
               <li key={entry.id} className="flex items-center justify-between gap-3 py-3">
-                <span className="grid">
+                <span className="grid min-w-0">
                   <span className="text-label-lg font-semibold text-ink">{t(entryLabels[entry.kind])}</span>
+                  {entry.listing_title ? <span className="truncate text-body-sm text-ink-2">{entry.listing_title}</span> : null}
                   <span className="text-body-sm text-ink-3">{formatDateTime(entry.created_at, language)}</span>
                 </span>
                 <bdi dir="ltr" className={cn('font-semibold tabular-nums', entry.amount_egp > 0 ? 'text-glaze-deep' : 'text-ink')}>

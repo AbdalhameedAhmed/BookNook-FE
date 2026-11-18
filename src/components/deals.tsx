@@ -4,6 +4,7 @@ import { MessageCircle, Send, ShieldCheck, TicketPercent, Wallet as WalletIcon, 
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { useActivity } from '../activity';
 import { describeError } from '../errors';
 import { useLanguage } from '../i18n';
 import type { ChatMessage, PromoPreview } from '../types';
@@ -79,6 +80,7 @@ export function ChatThread({ transactionId, otherName, canSend }: { transactionI
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLOListElement>(null);
   const token = session?.access_token;
+  const { markRead } = useActivity();
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -101,7 +103,10 @@ export function ChatThread({ transactionId, otherName, canSend }: { transactionI
   useEffect(() => {
     const list = listRef.current;
     if (list) list.scrollTop = list.scrollHeight;
-  }, [messages]);
+    // Seeing the thread counts as reading it (clears the "new message" marker).
+    const latest = messages?.[messages.length - 1];
+    if (latest) markRead(transactionId, latest.created_at);
+  }, [messages, markRead, transactionId]);
 
   const send = async (event: FormEvent) => {
     event.preventDefault();

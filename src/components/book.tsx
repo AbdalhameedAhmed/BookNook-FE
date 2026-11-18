@@ -135,7 +135,8 @@ export function BookCard({ listing, price, conditionLabel, authorFallback, selle
   const body = (
     <>
       <span className="relative block aspect-[3/4] w-full overflow-hidden bg-sunk">
-        <BookCover listing={listing} photo={photo} className="h-full rounded-none shadow-none after:hidden [&>img]:transition-transform [&>img]:duration-300 group-hover:[&>img]:scale-105" />
+        {/* Generated covers print the title at the top; push it below the price/condition badges. */}
+        <BookCover listing={listing} photo={photo} className={cn('h-full rounded-none shadow-none after:hidden [&>img]:transition-transform [&>img]:duration-300 group-hover:[&>img]:scale-105', !(photo ?? listingImage(listing)) && 'pt-[72px]')} />
         <span className="absolute start-3 top-3 flex flex-col items-start gap-1">
           <span className={cn('rounded-full px-2.5 py-1 text-label-sm font-bold shadow-sm', typeSolid[listing.listing_type])}>{price}</span>
           <span className="rounded-md bg-surface/90 px-2 py-0.5 text-[11px] font-medium text-ink backdrop-blur-sm">{conditionLabel}</span>
@@ -143,7 +144,7 @@ export function BookCard({ listing, price, conditionLabel, authorFallback, selle
       </span>
       <span className="flex flex-1 flex-col justify-between p-4">
         <span className="block min-w-0">
-          <span dir="auto" className={cn('line-clamp-1 ltr:text-left rtl:text-right text-title-lg font-bold text-ink transition-colors', to && 'group-hover:text-glaze-deep')}>{listing.title}</span>
+          <span dir="auto" className={cn('line-clamp-2 ltr:text-left rtl:text-right text-title-lg font-bold leading-snug text-ink transition-colors', to && 'group-hover:text-glaze-deep')}>{listing.title}</span>
           <span dir="auto" className="mt-0.5 block truncate ltr:text-left rtl:text-right text-body-sm font-medium text-ink-2">{listing.author || authorFallback}</span>
           <span className="mt-1 flex min-w-0 items-center gap-1 text-ink-2">
             <MapPin className="shrink-0 text-glaze-deep" size={15} aria-hidden="true" />

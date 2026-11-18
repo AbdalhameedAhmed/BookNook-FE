@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Ban, BookX, Camera, ChevronRight, EyeOff, Flag, HandHeart, Handshake, Info, Lock, MapPin, MoreHorizontal, Navigation, Send, ShieldAlert, ShieldCheck, Sun, UserX } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -8,7 +8,7 @@ import type { Listing, PromoPreview } from '../types';
 import { formatCondition, formatMeetup, useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { describeError, isNotFound } from '../errors';
-import { listingImage, timeAgo } from '../lib/listing';
+import { listingImage, priceLabel, timeAgo } from '../lib/listing';
 import { Alert } from '../components/ui/alert';
 import { Button, buttonClass } from '../components/ui/button';
 import { Dialog, dialogFooter } from '../components/ui/dialog';
@@ -113,6 +113,17 @@ export default function BookDetail() {
     return () => { active = false; };
   }, [needsWallet, token, listingType]);
   useEffect(() => loadWallet(), [loadWallet]);
+
+  // Phones: the request panel sits far down the page, so a bottom bar offers the action until it's on screen.
+  const requestPanelRef = useRef<HTMLElement>(null);
+  const [panelOnScreen, setPanelOnScreen] = useState(true);
+  useEffect(() => {
+    const panel = requestPanelRef.current;
+    if (!panel || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver(([entry]) => setPanelOnScreen(entry.isIntersecting), { rootMargin: '0px 0px -80px 0px' });
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [listing]);
 
   if (loading) return <DetailSkeleton label={t('loadingBooks')} />;
   if (loadError && !loadError.notFound) {
@@ -307,7 +318,7 @@ export default function BookDetail() {
             </p>
           </section>
 
-          <section className="grid gap-4 rounded-card bg-surface p-5 shadow-deck sm:p-6" aria-labelledby="request-heading">
+          <section ref={requestPanelRef} className="grid scroll-mt-24 gap-4 rounded-card bg-surface p-5 shadow-deck sm:p-6" aria-labelledby="request-heading">
             <div className="flex items-center gap-2">
               <HandHeart size={24} className="shrink-0 text-glaze-deep" aria-hidden="true" />
               <h2 id="request-heading" className="text-title-lg font-bold text-ink [overflow-wrap:anywhere]">
@@ -394,6 +405,22 @@ export default function BookDetail() {
           )}
         </div>
       </article>
+      {canRequest && !requestSent && !panelOnScreen ? (
+        <div className="fixed inset-x-0 bottom-[calc(58px+env(safe-area-inset-bottom))] z-40 border-t border-line bg-surface/95 px-[var(--gutter)] py-2.5 shadow-[0_-4px_16px_rgb(0_0_0/.06)] backdrop-blur-xl md:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <span className="min-w-0">
+              <span className="block truncate text-label-md text-ink-2">{listing.title}</span>
+              <strong className="font-book text-title-lg text-ink">{priceLabel(listing, t)}</strong>
+            </span>
+            <Button className="min-h-11 flex-none rounded-xl" onClick={() => {
+              requestPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              requestPanelRef.current?.querySelector<HTMLElement>('textarea, button[type="submit"]')?.focus({ preventScroll: true });
+            }}>
+              <Send size={17} className={ui.flipRtl} aria-hidden="true" />{session ? t('requestBook') : t('signInToRequest')}
+            </Button>
+          </div>
+        </div>
+      ) : null}
       {session ? <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} listingId={listing.id} token={session.access_token} /> : null}
     </div>
   );

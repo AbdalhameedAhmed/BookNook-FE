@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   ArrowDownToLine, ArrowRight, ArrowUpFromLine, BookOpen, Check, CheckCircle2, ChevronRight, Handshake, Inbox,
   Hourglass, LayoutDashboard, Leaf, Library, LogOut, Mail, MapPin, MessageCircle, Pencil, Plus, Quote, Repeat, Send, ShieldCheck, Wallet,
 } from 'lucide-react';
-import { Link, Navigate, NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { CountBadge, awaitsConfirmation, useActivity } from '../activity';
 import type { BookRequest, Listing, PromoPreview, Transaction } from '../types';
 import { formatCondition, formatMeetup, formatStatus, useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
@@ -37,13 +38,21 @@ export function AccountLayout() {
   const toast = useToast();
   const navigate = useNavigate();
   const displayName = session?.user.display_name || session?.user.email.split('@')[0] || '';
+  const { pendingIncoming, handoversNeedingYou } = useActivity();
+  const location = useLocation();
+  const tabsRef = useRef<HTMLElement>(null);
   const tabs = [
-    { to: '/account', label: t('overview'), icon: LayoutDashboard, end: true },
-    { to: '/account/books', label: t('myBooks'), icon: BookOpen },
-    { to: '/account/requests', label: t('requests'), icon: Inbox },
-    { to: '/account/handovers', label: t('transactions'), icon: Handshake },
-    { to: '/account/wallet', label: t('wallet'), icon: Wallet },
+    { to: '/account', label: t('overview'), icon: LayoutDashboard, end: true, count: 0 },
+    { to: '/account/books', label: t('myBooks'), icon: BookOpen, count: 0 },
+    { to: '/account/requests', label: t('requests'), icon: Inbox, count: pendingIncoming },
+    { to: '/account/handovers', label: t('transactions'), icon: Handshake, count: handoversNeedingYou },
+    { to: '/account/wallet', label: t('wallet'), icon: Wallet, count: 0 },
   ];
+
+  // On phones the tabs scroll sideways; keep the current one in view (e.g. Wallet, the last tab).
+  useEffect(() => {
+    tabsRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [location.pathname]);
 
   const signOut = async () => {
     const confirmed = await confirm({ title: t('confirmSignOutTitle'), description: t('confirmSignOutCopy'), confirmLabel: t('signOut'), cancelLabel: t('cancel') });
@@ -76,8 +85,8 @@ export function AccountLayout() {
             </Button>
           </div>
         </header>
-        <nav className="-mx-[var(--gutter)] mt-4 flex gap-2 overflow-x-auto px-[var(--gutter)] [scrollbar-width:none] md:mx-0 md:mt-0 md:bg-sunk md:px-8 md:pt-5 lg:px-10 [&::-webkit-scrollbar]:hidden" aria-label={t('accountSections')}>
-          {tabs.map(({ to, label, icon: Icon, end }) => (
+        <nav ref={tabsRef} className="-mx-[var(--gutter)] mt-4 flex gap-2 overflow-x-auto px-[var(--gutter)] [scrollbar-width:none] md:mx-0 md:mt-0 md:bg-sunk md:px-8 md:pt-5 lg:px-10 [&::-webkit-scrollbar]:hidden" aria-label={t('accountSections')}>
+          {tabs.map(({ to, label, icon: Icon, end, count }) => (
             <NavLink
               key={to}
               to={to}
@@ -89,7 +98,7 @@ export function AccountLayout() {
                   : 'bg-sunk-2 text-ink-2 hover:text-ink md:bg-transparent md:hover:bg-sunk-2',
               )}
             >
-              <Icon size={18} aria-hidden="true" />{label}
+              <Icon size={18} aria-hidden="true" />{label}<CountBadge count={count} label={`${count} ${t('needsYou')}`} />
             </NavLink>
           ))}
         </nav>
@@ -105,8 +114,10 @@ export function AccountOverview() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [requests, setRequests] = useState<BookRequest[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [wallet, setWallet] = useState<{ balance: number; held: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const egp = useEgp();
 
   const load = useCallback(() => {
     let active = true;
@@ -114,10 +125,11 @@ export function AccountOverview() {
     if (!token) return () => { active = false; };
     setLoading(true);
     setError('');
-    Promise.all([api.myListings(token), api.activity(token)])
-      .then(([myListings, activity]) => {
+    Promise.all([api.myListings(token), api.activity(token), api.wallet(token)])
+      .then(([myListings, activity, myWallet]) => {
         if (!active) return;
         setListings(myListings);
+        setWallet({ balance: myWallet.balance_egp, held: myWallet.held_egp });
         setRequests(activity.requests);
         setTransactions(activity.transactions);
       })
@@ -141,12 +153,31 @@ export function AccountOverview() {
   const titles = (items: Array<{ listing_title?: string | null }>) => items.map((item) => item.listing_title).filter(Boolean).join(' · ');
 
   return (
-    <div className="grid gap-8 md:gap-10">
+    // min-w-0 on each child: the horizontally scrolling shelf must not widen the page on phones.
+    <div className="grid gap-8 md:gap-10 [&>*]:min-w-0">
       <ul className="grid grid-cols-3 gap-2.5 md:gap-6" aria-busy={loading}>
         <StatTile label={t('statOnShelf')} note={t('statOnShelfNote')} value={onShelf} loading={loading} icon={<Library size={22} />} tone="bg-sunk-2 text-glaze-deep" valueTone="text-glaze-deep" />
         <StatTile label={t('statHandedOver')} note={t('statHandedOverNote')} value={handedOver} loading={loading} icon={<ShieldCheck size={22} />} tone="bg-cobalt-soft text-cobalt" valueTone="text-cobalt" />
         <StatTile label={t('statSent')} note={t('statSentNote')} value={sentPending} loading={loading} icon={<Send size={22} className={ui.flipRtl} />} tone="bg-ochre-soft text-ochre-ink" valueTone="text-ochre-ink" />
       </ul>
+
+      <Link to="/account/wallet" className={cn(ui.card, 'group flex items-center justify-between gap-4 p-4 md:p-5')}>
+        <span className="flex min-w-0 items-center gap-3.5">
+          <span className={cn(iconTile, 'bg-glaze-fixed text-glaze-deep')} aria-hidden="true"><Wallet size={22} /></span>
+          <span className="grid min-w-0">
+            <span className="text-label-md font-semibold text-ink-2">{t('walletBalance')}</span>
+            {wallet ? (
+              <span className="flex flex-wrap items-baseline gap-x-2">
+                <strong className="font-book text-headline-sm font-bold text-glaze-deep">{egp(wallet.balance)}</strong>
+                {wallet.held ? <span className="text-body-sm text-ink-3">+ {egp(wallet.held)} {t('walletHeld').toLowerCase()}</span> : null}
+              </span>
+            ) : <span className={cn(ui.skeleton, 'mt-1 h-6 w-24')} />}
+          </span>
+        </span>
+        <span className="inline-flex flex-none items-center gap-1 text-label-md font-semibold text-glaze-deep group-hover:underline">
+          {t('topUpWallet')}<ChevronRight size={16} className={ui.flipRtl} aria-hidden="true" />
+        </span>
+      </Link>
 
       <div className="grid gap-6 lg:grid-cols-12">
         <section className="lg:col-span-8" aria-labelledby="attention-heading">
@@ -180,7 +211,7 @@ export function AccountOverview() {
                   to="/account/handovers"
                   icon={<MapPin size={22} />}
                   iconTone="bg-ochre-soft text-ochre-ink"
-                  title={`${arranging} ${t('arrangingCount')}`}
+                  title={arranging === 1 ? t('arrangingCountOne') : `${arranging} ${t('arrangingCount')}`}
                   detail={titles(arrangingHandovers)}
                   cta={t('viewHandovers')}
                   ctaTone="bg-sunk-2 text-ink group-hover:bg-sunk-3"
@@ -434,6 +465,7 @@ export function RequestsPage() {
   /** Promo codes the seller/owner applied before accepting, by request id. */
   const [promos, setPromos] = useState<Record<string, PromoPreview | null>>({});
   const egp = useEgp();
+  const activity = useActivity();
 
   const reload = useCallback(async () => {
     if (!session) return;
@@ -466,6 +498,7 @@ export function RequestsPage() {
         status === 'accepted' ? promos[request.id]?.code : undefined);
       toast.success(t('requestUpdated'), t(copy.done));
       await reload();
+      activity.refresh();
     } catch (reason) {
       toast.error(t('updateRequestFailed'), describeError(reason, t, 'updateRequestFailed'));
     } finally {
@@ -476,8 +509,10 @@ export function RequestsPage() {
   if (loading) return <CardSkeletons label={t('loadingRequests')} />;
   if (error) return <Alert title={t('requestFailed')} onRetry={() => { setLoading(true); void reload(); }} retryLabel={t('tryAgain')}>{error}</Alert>;
 
-  const incoming = requests.filter((request) => request.seller_id === session?.user.id);
-  const outgoing = requests.filter((request) => request.seller_id !== session?.user.id);
+  const rank = (request: BookRequest) => (request.status === 'pending' ? 0 : request.status === 'accepted' ? 1 : 2);
+  const byUrgency = (a: BookRequest, b: BookRequest) => rank(a) - rank(b);
+  const incoming = requests.filter((request) => request.seller_id === session?.user.id).sort(byUrgency);
+  const outgoing = requests.filter((request) => request.seller_id !== session?.user.id).sort(byUrgency);
   const waiting = incoming.filter((request) => request.status === 'pending').length;
 
   const renderRequest = (request: BookRequest, isIncoming: boolean) => {
@@ -505,16 +540,9 @@ export function RequestsPage() {
                 <Link className="text-title-lg font-semibold text-ink hover:text-glaze-deep" to={`/books/${request.listing_id}`}>{request.listing_title || t('openBook')}</Link>
                 <StatusPill status={request.status} />
               </div>
+              {isIncoming && request.buyer_name ? <span className="text-body-sm text-ink-2">{t('from')} <strong className="font-semibold text-ink">{request.buyer_name}</strong></span> : null}
             </div>
           </div>
-          {request.status === 'pending' ? (
-            <div className="flex flex-wrap items-center gap-2.5 self-end lg:self-center">
-              {isIncoming ? <>
-                <Button variant="ghost" className="min-h-11 rounded-xl bg-sunk [&:not(:disabled):hover]:text-pom" onClick={() => void update(request, 'rejected')} disabled={busy}>{t('decline')}</Button>
-                <Button className="min-h-11 rounded-xl" onClick={() => void update(request, 'accepted')} loading={busy} disabled={cannotAccept}>{busy ? null : <Check size={18} aria-hidden="true" />}{t('acceptRequest')}</Button>
-              </> : <Button variant="ghost" className="min-h-11 rounded-xl underline underline-offset-[3px] [&:not(:disabled):hover]:text-pom" onClick={() => void update(request, 'cancelled')} loading={busy}>{t('cancelRequest')}</Button>}
-            </div>
-          ) : null}
         </div>
         <blockquote className="flex items-start gap-3 rounded-xl bg-sunk p-4 text-body-md text-ink">
           <Quote size={18} className="mt-0.5 flex-none text-glaze-deep" aria-hidden="true" />
@@ -562,6 +590,14 @@ export function RequestsPage() {
         ) : null}
         {pending && !isIncoming && request.held_egp > 0 ? (
           <p className="rounded-xl bg-sunk p-3.5 text-body-md text-ink-2">{fill(t('heldForRequest'), { amount: egp(request.held_egp) })}</p>
+        ) : null}
+        {request.status === 'pending' ? (
+          <div className="flex flex-wrap items-center justify-end gap-2.5 border-t border-line-strong/30 pt-4">
+            {isIncoming ? <>
+              <Button variant="ghost" className="min-h-11 rounded-xl bg-sunk [&:not(:disabled):hover]:text-pom" onClick={() => void update(request, 'rejected')} disabled={busy}>{t('decline')}</Button>
+              <Button className="min-h-11 rounded-xl" onClick={() => void update(request, 'accepted')} loading={busy} disabled={cannotAccept}>{busy ? null : <Check size={18} aria-hidden="true" />}{t('acceptRequest')}</Button>
+            </> : <Button variant="ghost" className="min-h-11 rounded-xl underline underline-offset-[3px] [&:not(:disabled):hover]:text-pom" onClick={() => void update(request, 'cancelled')} loading={busy}>{t('cancelRequest')}</Button>}
+          </div>
         ) : null}
         {request.status === 'accepted' ? (
           <p className="flex items-start gap-3 rounded-xl bg-glaze-soft p-3.5 text-body-md text-ink">
@@ -614,6 +650,7 @@ export function TransactionsPage() {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState<string | null>(null);
+  const activity = useActivity();
   const egp = useEgp();
 
   const reload = useCallback(async () => {
@@ -638,6 +675,7 @@ export function TransactionsPage() {
     try {
       const updated = await api.completeTransaction(session.access_token, transaction.id);
       setTransactions((current) => current.map((item) => item.id === transaction.id ? { ...item, ...updated } : item));
+      activity.refresh();
       if (updated.status === 'completed') toast.success(t('statusCompleted'), t('transactionCompleted'));
       else toast.success(t('youConfirmed'));
     } catch (reason) {
@@ -647,7 +685,10 @@ export function TransactionsPage() {
     }
   };
 
-  const current = transactions.filter((item) => item.status === 'arranging' || item.status === 'disputed');
+  // Handovers waiting on you (a confirmation or an unread message) come first.
+  const needsYou = (item: Transaction) => activity.isUnread(item) || awaitsConfirmation(item, session?.user.id);
+  const current = transactions.filter((item) => item.status === 'arranging' || item.status === 'disputed')
+    .sort((a, b) => Number(needsYou(b)) - Number(needsYou(a)));
   const past = transactions.filter((item) => item.status !== 'arranging' && item.status !== 'disputed');
   const receiving = (transaction: Transaction) => transaction.buyer_id === session?.user.id;
   const otherName = (transaction: Transaction) => (receiving(transaction) ? transaction.seller_name : transaction.buyer_name) || t('brandName');
@@ -702,6 +743,8 @@ export function TransactionsPage() {
                 <Button variant="tonal" block className="min-h-11 rounded-xl" aria-expanded={chatOpen === transaction.id} onClick={() => setChatOpen((open) => (open === transaction.id ? null : transaction.id))}>
                   <MessageCircle size={18} aria-hidden="true" />
                   {chatOpen === transaction.id ? t('hideChat') : fill(t('openChat'), { name: otherName(transaction) })}
+                  {chatOpen !== transaction.id && activity.isUnread(transaction)
+                    ? <span className="rounded-full bg-pom px-2 py-0.5 text-[11px] font-bold text-white">{t('newMessage')}</span> : null}
                 </Button>
                 {chatOpen === transaction.id ? (
                   <ChatThread transactionId={transaction.id} otherName={otherName(transaction)} canSend={transaction.status === 'arranging'} />

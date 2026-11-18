@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Compass, Inbox, Library, Moon, Plus, PlusCircle, ShieldCheck, ShieldHalf, Sun, UserRound } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { ProtectedRoute, useAuth } from './auth';
+import { CountBadge, useActivity } from './activity';
 import { RfoofWordmark } from './components/brand';
 import Storefront from './pages/Storefront';
 import BookDetail from './pages/BookDetail';
@@ -73,6 +74,8 @@ function SiteLayout() {
 
   const displayName = session?.user.display_name || session?.user.email || '';
   const isModerator = session?.user.role === 'moderator';
+  const { pendingIncoming, handoversNeedingYou } = useActivity();
+  const attention = (count: number) => `${count} ${t('needsYou')}`;
   const sellTarget = session ? '/sell' : '/signin';
   const sellState = session ? undefined : { from: '/sell' };
 
@@ -88,8 +91,8 @@ function SiteLayout() {
           <Wordmark />
           <nav className="hidden items-center gap-1 rounded-xl bg-sunk p-1 md:flex" aria-label={t('mainNav')}>
             <NavLink to="/" end className={topnavClass}>{t('navBrowse')}</NavLink>
-            {session ? <NavLink to="/account/requests" className={topnavClass}>{t('navRequests')}</NavLink> : null}
-            {session ? <NavLink to="/account" end className={topnavClass}>{t('navAccount')}</NavLink> : null}
+            {session ? <NavLink to="/account/requests" className={topnavClass}>{t('navRequests')}<CountBadge count={pendingIncoming} label={attention(pendingIncoming)} /></NavLink> : null}
+            {session ? <NavLink to="/account" end className={topnavClass}>{t('navAccount')}<CountBadge count={handoversNeedingYou} label={attention(handoversNeedingYou)} /></NavLink> : null}
             {isModerator ? <NavLink to="/admin" className={topnavClass}>{t('navAdmin')}</NavLink> : null}
           </nav>
           <div className="ms-auto flex items-center gap-2">
@@ -155,8 +158,14 @@ function SiteLayout() {
           : <Link to={sellTarget} state={sellState} className={tabbarLink}><PlusCircle size={22} aria-hidden="true" /><span>{t('listBook')}</span></Link>}
         {session ? (
           <>
-            <NavLink to="/account/requests" className={tabbarClass}><Inbox size={22} aria-hidden="true" /><span>{t('navRequests')}</span></NavLink>
-            <NavLink to="/account" end className={tabbarClass}><UserRound size={22} aria-hidden="true" /><span>{t('navAccount')}</span></NavLink>
+            <NavLink to="/account/requests" className={tabbarClass}>
+              <span className="relative"><Inbox size={22} aria-hidden="true" /><CountBadge className="absolute -end-3 -top-1.5" count={pendingIncoming} label={attention(pendingIncoming)} /></span>
+              <span>{t('navRequests')}</span>
+            </NavLink>
+            <NavLink to="/account" end className={tabbarClass}>
+              <span className="relative"><UserRound size={22} aria-hidden="true" /><CountBadge className="absolute -end-3 -top-1.5" count={handoversNeedingYou} label={attention(handoversNeedingYou)} /></span>
+              <span>{t('navAccount')}</span>
+            </NavLink>
             {isModerator ? <NavLink to="/admin" className={tabbarClass}><ShieldHalf size={22} aria-hidden="true" /><span>{t('navAdmin')}</span></NavLink> : null}
           </>
         ) : (

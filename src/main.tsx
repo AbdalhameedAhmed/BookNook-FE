@@ -8,6 +8,7 @@ import { LanguageProvider, useLanguage } from './i18n';
 import { ToastProvider } from './components/ui/toast';
 import { ConfirmProvider } from './components/ui/dialog';
 import { ThemeProvider } from './theme';
+import { ActivityProvider } from './activity';
 
 function FeedbackProviders({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
@@ -25,7 +26,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <LanguageProvider>
           <FeedbackProviders>
             <AuthProvider>
-              <App />
+              <ActivityProvider>
+                <App />
+              </ActivityProvider>
             </AuthProvider>
           </FeedbackProviders>
         </LanguageProvider>

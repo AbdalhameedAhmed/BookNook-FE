@@ -72,6 +72,9 @@ export type Transaction = {
   buyer_name: string | null;
   seller_name: string | null;
   created_at?: string;
+  /** Latest chat message, for "new message" markers. */
+  last_message_at?: string | null;
+  last_message_sender_id?: string | null;
 };
 
 export type ChatMessage = {
@@ -87,6 +90,8 @@ export type WalletEntry = {
   amount_egp: number;
   kind: 'topup' | 'hold' | 'refund' | 'payout' | 'fee';
   created_at: string;
+  /** The book a hold, refund, or payout relates to. */
+  listing_title?: string | null;
 };
 
 export type ListingPayload = {

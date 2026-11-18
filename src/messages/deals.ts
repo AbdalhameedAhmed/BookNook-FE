@@ -76,6 +76,8 @@ export const dealMessages = {
     sellerLabel: 'Seller',
     statRevenue: 'Rfoof fees earned',
     statHeld: 'Held in open deals',
+    newMessage: 'New',
+    walletPendingReview: '{amount} waiting for review. It’s added once an admin confirms the transfer.',
   },
   ar: {
     bookPrice: 'سعر الكتاب',
@@ -150,5 +152,7 @@ export const dealMessages = {
     sellerLabel: 'البائع',
     statRevenue: 'رسوم رفوف المحصّلة',
     statHeld: 'محجوز في صفقات جارية',
+    newMessage: 'جديد',
+    walletPendingReview: '{amount} بانتظار المراجعة. يُضاف بعد أن يؤكد المشرف التحويل.',
   },
 } as const;

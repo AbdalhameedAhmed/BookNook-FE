@@ -27,6 +27,7 @@ export const accountMessages = {
     agreedMethod: 'How you’ll meet',
     confirmOnlyAfter: 'Confirm only after the book has changed hands in person.',
     pastHandovers: 'Past handovers',
+    arrangingCountOne: '1 handover to arrange',
   },
   ar: {
     statOnShelf: 'كتب على الرفّ',
@@ -55,5 +56,6 @@ export const accountMessages = {
     agreedMethod: 'طريقة اللقاء',
     confirmOnlyAfter: 'لا تؤكّد إلا بعد أن ينتقل الكتاب يداً بيد.',
     pastHandovers: 'عمليات تسليم سابقة',
+    arrangingCountOne: 'عملية تسليم واحدة للترتيب',
   },
 } as const;
