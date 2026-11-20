@@ -186,7 +186,9 @@ export type PromoCode = {
 export type NotificationKind =
   | 'request_new' | 'request_accepted' | 'request_rejected' | 'request_unavailable' | 'request_cancelled'
   | 'deal_confirmed_by_other' | 'deal_completed' | 'deal_cancelled' | 'message'
-  | 'topup_approved' | 'topup_rejected';
+  | 'topup_approved' | 'topup_rejected'
+  /** Moderators only. */
+  | 'topup_submitted' | 'report_new';
 
 /** An in-app notification. `data` is plain display text from the server; never render it as HTML. */
 export type AppNotification = {

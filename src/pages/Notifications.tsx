@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  Ban, Bell, BellOff, BellRing, CheckCheck, CheckCircle2, Handshake, Inbox, MessageCircle, Undo2, Wallet, XCircle,
+  Ban, Bell, BellOff, BellRing, CheckCheck, CheckCircle2, Flag, Handshake, Inbox, MessageCircle, Undo2, Wallet, XCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -39,6 +39,8 @@ const links: Record<NotificationKind, string> = {
   message: '/account/handovers',
   topup_approved: '/account/wallet',
   topup_rejected: '/account/wallet',
+  topup_submitted: '/admin/topups',
+  report_new: '/admin',
 };
 
 const looks: Record<NotificationKind, { icon: ReactNode; tone: string; text: MessageKey }> = {
@@ -53,6 +55,8 @@ const looks: Record<NotificationKind, { icon: ReactNode; tone: string; text: Mes
   message: { icon: <MessageCircle size={20} />, tone: 'bg-cobalt-soft text-cobalt-ink', text: 'notifMessage' },
   topup_approved: { icon: <Wallet size={20} />, tone: 'bg-glaze-soft text-glaze-deep', text: 'notifTopupApproved' },
   topup_rejected: { icon: <Wallet size={20} />, tone: 'bg-pom-soft text-pom', text: 'notifTopupRejected' },
+  topup_submitted: { icon: <Wallet size={20} />, tone: 'bg-ochre-soft text-ochre-ink', text: 'notifTopupSubmitted' },
+  report_new: { icon: <Flag size={20} />, tone: 'bg-pom-soft text-pom', text: 'notifReportNew' },
 };
 
 export function NotificationsPage() {
@@ -172,9 +176,11 @@ function NotificationRow({ item, onOpen }: { item: AppNotification; onOpen: () =
     amount,
     count: item.count,
   };
-  const text = fill(t(item.kind === 'message' && item.count > 1 ? 'notifMessages' : look.text), values);
-  // A second line: what happened to the money, the chat preview, or the moderator's note.
-  const detail = item.kind === 'message' ? data.preview
+  const key: MessageKey = item.kind === 'message' && item.count > 1 ? 'notifMessages'
+    : item.kind === 'report_new' && !data.listing_title ? 'notifReportUser' : look.text;
+  const text = fill(t(key), values);
+  // A second line: what happened to the money, the chat preview, the report reason, or the moderator's note.
+  const detail = item.kind === 'message' || item.kind === 'report_new' ? data.preview
     : item.kind === 'topup_rejected' ? data.note
       : amount && item.kind === 'deal_completed' ? fill(t('notifPayout'), { amount })
         : amount && !item.kind.startsWith('topup') ? fill(t('notifRefund'), { amount })
