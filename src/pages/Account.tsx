@@ -165,7 +165,7 @@ export function AccountOverview() {
             <span className="text-label-md font-semibold text-ink-2">{t('walletBalance')}</span>
             {wallet ? (
               <span className="flex flex-wrap items-baseline gap-x-2">
-                <strong className="font-book text-headline-sm font-bold text-glaze-deep">{egp(wallet.balance)}</strong>
+                <strong className="font-book text-headline-sm font-bold text-glaze-deep ar:font-ui ar:leading-[1.5]">{egp(wallet.balance)}</strong>
                 {wallet.held ? <span className="text-body-sm text-ink-3">+ {egp(wallet.held)} {t('walletHeld').toLowerCase()}</span> : null}
               </span>
             ) : <span className={cn(ui.skeleton, 'mt-1 h-6 w-24')} />}

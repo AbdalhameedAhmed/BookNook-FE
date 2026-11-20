@@ -86,8 +86,8 @@ export function WalletPage() {
               <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-glaze-fixed text-glaze-deep" aria-hidden="true"><WalletIcon size={22} /></span>
               <h2 id="wallet-balance-heading" className="text-label-lg font-semibold text-ink-2">{t('walletBalance')}</h2>
             </div>
-            <p className="relative mt-3 font-book text-display-lg-mobile font-bold text-glaze-deep md:text-display-lg">{formatEgp(wallet.balance_egp, language, t)}</p>
-            <p className="relative mt-1 text-body-sm text-ink-3">{t('walletBalanceNote')}</p>
+            <p className="relative mt-3 font-book text-display-lg-mobile font-bold text-glaze-deep md:text-display-lg ar:font-ui ar:leading-[1.7] ar:tracking-normal">{formatEgp(wallet.balance_egp, language, t)}</p>
+            <p className="relative mt-1 text-body-sm text-ink-3 ar:mt-3">{t('walletBalanceNote')}</p>
             {pendingTopups > 0 ? (
               <p className="relative mt-3 flex items-center gap-2 rounded-lg bg-ochre-soft px-3 py-2 text-body-sm text-ink" role="status">
                 <Hourglass size={16} className="flex-none text-ochre-ink" aria-hidden="true" />
@@ -137,7 +137,7 @@ export function WalletPage() {
             {wallet.topups.map((topup) => (
               <li key={topup.id} className={cn(ui.card, 'flex flex-wrap items-start justify-between gap-3 p-4 md:p-5')}>
                 <div className="grid min-w-0 gap-1">
-                  <span className="font-book text-headline-sm font-semibold text-ink">{formatEgp(topup.amount_egp, language, t)}</span>
+                  <span className="font-book text-headline-sm font-semibold text-ink ar:font-ui ar:leading-[1.5]">{formatEgp(topup.amount_egp, language, t)}</span>
                   <span className="text-body-sm text-ink-2">
                     {t('optionEwallet')} · {t('sentFrom')} <bdi dir="ltr">{topup.sender_number}</bdi>
                   </span>

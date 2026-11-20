@@ -209,7 +209,7 @@ export function AdminTopupsPage() {
               )}
               <div className="grid content-start gap-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-book text-headline-md font-bold text-glaze-deep">{formatEgp(topup.amount_egp, language, t)}</span>
+                  <span className="font-book text-headline-md font-bold text-glaze-deep ar:font-ui ar:leading-[1.5]">{formatEgp(topup.amount_egp, language, t)}</span>
                   <span className="text-body-sm text-ink-3">{t('submittedOn')} {formatDateTime(topup.created_at, language)}</span>
                 </div>
                 <dl className="grid gap-1.5 text-body-md sm:grid-cols-[auto_1fr] sm:gap-x-4">
