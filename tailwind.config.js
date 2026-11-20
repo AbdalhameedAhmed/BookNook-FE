@@ -86,6 +86,7 @@ export default {
         'pulse-soft': { '50%': { opacity: '.5' } },
         rise: { from: { opacity: '0', transform: 'translateY(8px)' } },
         drain: { to: { transform: 'scaleX(0)' } },
+        tray: { from: { opacity: '0', transform: 'translateY(-6px) scale(.98)' } },
       },
       animation: {
         shelve: 'shelve .55s cubic-bezier(.2, .8, .25, 1) both',
@@ -94,6 +95,7 @@ export default {
         rise: 'rise .18s ease-out',
         'rise-toast': 'rise .2s ease-out',
         drain: 'drain linear forwards',
+        tray: 'tray .16s cubic-bezier(.2, .8, .25, 1)',
       },
     },
   },

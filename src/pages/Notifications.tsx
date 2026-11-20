@@ -1,22 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  Ban, Bell, BellOff, BellRing, CheckCheck, CheckCircle2, Flag, Handshake, Inbox, MessageCircle, Undo2, Wallet, XCircle,
+  Ban, Bell, CheckCheck, CheckCircle2, Flag, Handshake, Inbox, MessageCircle, Settings, Undo2, Wallet, XCircle,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { useActivity } from '../activity';
 import { useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { describeError } from '../errors';
-import { disablePush, enablePush, getPushState } from '../push';
-import { needsIosInstall } from '../install';
-import { InstallCard } from '../components/install-card';
-import type { PushState } from '../push';
 import type { AppNotification, NotificationKind } from '../types';
 import { Alert } from '../components/ui/alert';
-import { Button } from '../components/ui/button';
+import { Button, buttonClass } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 import { fill, useEgp } from '../components/deals';
@@ -27,7 +23,7 @@ import { ui } from '../lib/ui';
 const PAGE_SIZE = 30;
 
 /** Where tapping a notification goes (keep in step with LINKS in Rfoof-BE/app/core/push.py). */
-const links: Record<NotificationKind, string> = {
+export const notificationLinks: Record<NotificationKind, string> = {
   request_new: '/account/requests',
   request_rejected: '/account/requests',
   request_unavailable: '/account/requests',
@@ -116,7 +112,7 @@ export function NotificationsPage() {
 
   const open = (item: AppNotification) => {
     if (!item.read_at) void markRead([item.id]).catch(() => undefined);
-    navigate(links[item.kind] ?? '/account');
+    navigate(notificationLinks[item.kind] ?? '/account');
   };
 
   const markAll = async () => {
@@ -129,20 +125,23 @@ export function NotificationsPage() {
   const unread = items.filter((item) => !item.read_at).length;
 
   return (
-    <section aria-labelledby="notifications-heading" aria-busy={loading} className="grid gap-6">
-      <InstallCard dismissible={false} />
-      <PushCard />
+    <section aria-labelledby="notifications-heading" aria-busy={loading} className={cn(ui.wrap, ui.page, 'max-w-[820px]')}>
       <div>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-line-strong/30 pb-3">
           <div>
-            <h2 id="notifications-heading" className={ui.sectionTitle}>{t('notificationsTitle')}</h2>
+            <h1 id="notifications-heading" className={ui.pageTitle}>{t('notificationsTitle')}</h1>
             <p className="mt-1 text-body-md text-ink-2">{t('notificationsIntro')}</p>
           </div>
-          {unread > 0 ? (
-            <Button variant="tonal" size="sm" loading={markingAll} onClick={() => void markAll()}>
-              <CheckCheck size={17} aria-hidden="true" />{t('markAllRead')}
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/settings/notifications" className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'min-h-11')}>
+              <Settings size={17} aria-hidden="true" />{t('alertSettingsLink')}
+            </Link>
+            {unread > 0 ? (
+              <Button variant="tonal" size="sm" loading={markingAll} onClick={() => void markAll()}>
+                <CheckCheck size={17} aria-hidden="true" />{t('markAllRead')}
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         {error ? <Alert onRetry={() => void load()} retryLabel={t('tryAgain')}>{error}</Alert> : null}
@@ -163,7 +162,8 @@ export function NotificationsPage() {
   );
 }
 
-function NotificationRow({ item, onOpen }: { item: AppNotification; onOpen: () => void }) {
+/** One notification as a tappable row. `compact` is the denser version used in the header tray. */
+export function NotificationRow({ item, onOpen, compact = false }: { item: AppNotification; onOpen: () => void; compact?: boolean }) {
   const { t, language } = useLanguage();
   const egp = useEgp();
   const look = looks[item.kind];
@@ -192,11 +192,11 @@ function NotificationRow({ item, onOpen }: { item: AppNotification; onOpen: () =
       <button
         type="button"
         onClick={onOpen}
-        className={cn('flex w-full items-start gap-3.5 px-4 py-4 text-start transition-colors hover:bg-sunk focus-visible:bg-sunk sm:px-5', isUnread && 'bg-glaze-soft/25')}
+        className={cn('flex w-full items-start gap-3.5 text-start transition-colors hover:bg-sunk focus-visible:bg-sunk', compact ? 'px-4 py-3' : 'px-4 py-4 sm:px-5', isUnread && 'bg-glaze-soft/25')}
       >
-        <span className={cn('grid h-10 w-10 flex-none place-items-center rounded-xl', look.tone)} aria-hidden="true">{look.icon}</span>
+        <span className={cn('grid flex-none place-items-center rounded-xl', compact ? 'h-9 w-9' : 'h-10 w-10', look.tone)} aria-hidden="true">{look.icon}</span>
         <span className="grid min-w-0 flex-1 gap-1">
-          <span className={cn('text-body-md text-ink', isUnread && 'font-semibold')}>{text}</span>
+          <span className={cn(compact ? 'text-body-sm' : 'text-body-md', 'text-ink', isUnread && 'font-semibold')}>{text}</span>
           {detail ? <span className="line-clamp-2 text-body-sm text-ink-2" dir="auto">{detail}</span> : null}
           <span className="text-label-sm text-ink-3">{formatDateTime(item.created_at, language)}</span>
         </span>
@@ -211,68 +211,10 @@ function NotificationRow({ item, onOpen }: { item: AppNotification; onOpen: () =
   );
 }
 
-function PushCard() {
-  const { session } = useAuth();
-  const { t, language } = useLanguage();
-  const toast = useToast();
-  const [state, setState] = useState<PushState | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    void getPushState().then((next) => { if (active) setState(next); });
-    return () => { active = false; };
-  }, []);
-
-  // Push switched off on the server: nothing to offer. On iPhone in Safari, the install card explains alerts.
-  if (state === null || state === 'unavailable' || (state === 'unsupported' && needsIosInstall())) return null;
-
-  const turnOn = async () => {
-    if (!session) return;
-    setBusy(true);
-    try {
-      const next = await enablePush(session.access_token, language);
-      setState(next);
-      if (next === 'on') toast.success(t('pushOnToast'));
-    } catch (reason) {
-      toast.error(t('pushFailed'), describeError(reason, t, 'pushFailed'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const turnOff = async () => {
-    setBusy(true);
-    await disablePush(session?.access_token);
-    setState('off');
-    setBusy(false);
-    toast.success(t('pushOffToast'));
-  };
-
-  const copy: Record<Exclude<PushState, 'unavailable'>, MessageKey> = {
-    unsupported: 'pushUnsupportedCopy', denied: 'pushDeniedCopy', off: 'pushOffCopy', on: 'pushOnCopy',
-  };
-  const Icon = state === 'on' ? BellRing : state === 'off' ? Bell : BellOff;
-
+export function ListSkeleton({ label, rows = 4, className }: { label: string; rows?: number; className?: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-card bg-sunk-3/60 p-4 sm:flex-nowrap sm:p-5">
-      <span className={cn('grid h-12 w-12 flex-none place-items-center rounded-xl shadow-sm', state === 'on' ? 'bg-glaze text-on-glaze' : 'bg-surface text-glaze-deep')} aria-hidden="true">
-        <Icon size={22} />
-      </span>
-      <div className="min-w-0 flex-1 basis-[14rem]">
-        <h2 className="text-title-md font-bold text-ink">{t('pushTitle')}</h2>
-        <p className="mt-0.5 text-body-sm text-ink-2">{t(copy[state])}</p>
-      </div>
-      {state === 'off' ? <Button className="w-full sm:w-auto" loading={busy} onClick={() => void turnOn()}>{t('pushTurnOn')}</Button> : null}
-      {state === 'on' ? <Button className="w-full sm:w-auto" variant="secondary" loading={busy} onClick={() => void turnOff()}>{t('pushTurnOff')}</Button> : null}
-    </div>
-  );
-}
-
-function ListSkeleton({ label }: { label: string }) {
-  return (
-    <div className={cn(ui.card, 'divide-y divide-line')} aria-busy="true" aria-label={label}>
-      {Array.from({ length: 4 }).map((_, index) => (
+    <div className={cn(ui.card, 'divide-y divide-line', className)} aria-busy="true" aria-label={label}>
+      {Array.from({ length: rows }).map((_, index) => (
         <div key={index} className="flex animate-pulse-soft gap-3.5 px-5 py-4">
           <span className="h-10 w-10 flex-none rounded-xl bg-line" />
           <span className="grid flex-1 content-start gap-2 pt-1">

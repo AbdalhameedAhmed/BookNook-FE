@@ -18,6 +18,8 @@ type AuthContextValue = {
   isLoading: boolean;
   signIn: (response: SessionResponse) => void;
   signOut: () => void;
+  /** Updates the signed-in user's details (e.g. a new profile photo) without a new token. */
+  updateUser: (changes: Partial<AuthUser>) => void;
 };
 
 const STORAGE_KEY = 'rfoof.session';
@@ -28,6 +30,7 @@ const AuthContext = createContext<AuthContextValue>({
   isLoading: true,
   signIn: () => undefined,
   signOut: () => undefined,
+  updateUser: () => undefined,
 });
 
 function readStoredSession(): Session | null {
@@ -76,6 +79,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateSession(null);
   }, [updateSession]);
 
+  const updateUser = useCallback((changes: Partial<AuthUser>) => {
+    setSession((current) => {
+      if (!current) return current;
+      const next = { ...current, user: { ...current.user, ...changes } };
+      writeStoredSession(next);
+      return next;
+    });
+  }, []);
+
   // Restore the saved session, then confirm with the API that it is still valid.
   useEffect(() => {
     const stored = readStoredSession();
@@ -117,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const value = useMemo(() => ({ session, isLoading, signIn, signOut }), [session, isLoading, signIn, signOut]);
+  const value = useMemo(() => ({ session, isLoading, signIn, signOut, updateUser }), [session, isLoading, signIn, signOut, updateUser]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

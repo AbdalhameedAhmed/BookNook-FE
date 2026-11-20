@@ -55,6 +55,20 @@ export const api = {
     resetPassword: (token: string, password: string) =>
       apiRequest<SessionResponse>('/api/v1/auth/reset-password', undefined, postJson({ token, password })),
     me: (token: string) => apiRequest<AuthUser>('/api/v1/auth/me', token),
+    /** Opens the link mailed to the new address; signs in with the updated account. */
+    confirmEmailChange: (token: string) =>
+      apiRequest<SessionResponse>('/api/v1/auth/confirm-email-change', undefined, postJson({ token })),
+  },
+  account: {
+    uploadAvatar: async (token: string, file: File) => {
+      const body = new FormData();
+      body.append('file', file);
+      return (await apiRequest<{ avatar_url: string }>('/api/v1/me/avatar', token, { method: 'POST', body })).avatar_url;
+    },
+    removeAvatar: (token: string) => apiRequest<void>('/api/v1/me/avatar', token, { method: 'DELETE' }),
+    /** Mails a confirmation link to `newEmail`; the email changes once it is opened. */
+    changeEmail: (token: string, newEmail: string, currentPassword: string) =>
+      apiRequest<{ message: string }>('/api/v1/me/email', token, postJson({ new_email: newEmail, current_password: currentPassword })),
   },
   listings: (filters: { q?: string; listingType?: string; condition?: string; page?: number; pageSize?: number } = {}) => {
     const params = new URLSearchParams();
@@ -117,8 +131,8 @@ export const api = {
     return apiRequest<WalletTopup>('/api/v1/wallet/topups', token, { method: 'POST', body });
   },
   notifications: {
-    list: (token: string, before?: string) =>
-      apiRequest<NotificationPage>(`/api/v1/me/notifications?limit=30${before ? `&before=${encodeURIComponent(before)}` : ''}`, token),
+    list: (token: string, before?: string, limit = 30) =>
+      apiRequest<NotificationPage>(`/api/v1/me/notifications?limit=${limit}${before ? `&before=${encodeURIComponent(before)}` : ''}`, token),
     unreadCount: async (token: string) =>
       (await apiRequest<{ unread_count: number }>('/api/v1/me/notifications/unread-count', token)).unread_count,
     /** Omit `ids` to mark everything read. */

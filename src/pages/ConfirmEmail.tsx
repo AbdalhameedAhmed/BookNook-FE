@@ -11,8 +11,8 @@ import { Alert } from '../components/ui/alert';
 import { useToast } from '../components/ui/toast';
 import { readLinkToken, useClearLinkToken } from './ResetPassword';
 
-/** Landing page for the confirmation link in the sign-up email. */
-export default function ConfirmEmail() {
+/** Landing page for the confirmation link in the sign-up email, or (with `change`) the email-change email. */
+export default function ConfirmEmail({ change = false }: { change?: boolean }) {
   const { signIn } = useAuth();
   const { t } = useLanguage();
   const toast = useToast();
@@ -27,22 +27,23 @@ export default function ConfirmEmail() {
     if (!token || started.current) return;
     started.current = true;
 
-    api.auth.confirmEmail(token)
+    (change ? api.auth.confirmEmailChange(token) : api.auth.confirmEmail(token))
       .then((response) => {
         signIn(response);
-        toast.success(t('emailConfirmedToast'));
-        navigate('/account', { replace: true });
+        toast.success(t(change ? 'emailChangedToast' : 'emailConfirmedToast'));
+        navigate(change ? '/settings/sign-in' : '/account', { replace: true });
       })
       .catch((reason) => {
-        if (reason instanceof ApiError && reason.status === 400) {
+        // An expired email-change link is explained here; the account keeps its old email.
+        if (reason instanceof ApiError && reason.status === 400 && !change) {
           navigate('/signin', { replace: true, state: { authError: 'expired' } });
           return;
         }
         setError(describeError(reason, t, 'somethingWrong'));
       });
-  }, [token, signIn, toast, navigate, t]);
+  }, [token, change, signIn, toast, navigate, t]);
 
-  if (!token) return <Navigate to="/signin" replace state={{ authError: 'expired' }} />;
+  if (!token) return <Navigate to={change ? '/settings/sign-in' : '/signin'} replace state={change ? undefined : { authError: 'expired' }} />;
 
   return (
     <div className={cn(ui.wrap, ui.page)}>
@@ -65,7 +66,7 @@ export default function ConfirmEmail() {
         )}
 
         <h1 className="relative mt-2 max-w-xs font-book text-headline-md font-semibold text-ink ar:leading-[1.5] ar:tracking-normal">
-          {error ? t('confirmFailedTitle') : `${t('confirmingEmail')}…`}
+          {error ? t(change ? 'emailChangeFailedTitle' : 'confirmFailedTitle') : `${t(change ? 'confirmingEmailChange' : 'confirmingEmail')}…`}
         </h1>
 
         {error ? (

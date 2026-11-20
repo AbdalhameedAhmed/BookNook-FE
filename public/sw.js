@@ -43,5 +43,5 @@ self.addEventListener('notificationclick', (event) => {
 
 /** Only same-site paths, never an absolute URL from the payload. */
 function safePath(value) {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/account/notifications';
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/notifications';
 }

@@ -44,6 +44,12 @@ const knownDetails: Record<string, MessageKey> = {
   'This promo code has been fully used': 'errorPromoExhausted',
   'Promo codes only apply to sale and exchange fees': 'errorPromoNotApplicable',
   'A promo code with this name already exists': 'errorPromoTaken',
+  'Profile photos must be 2 MB or smaller': 'imageTooLarge',
+  'Profile photo could not be uploaded': 'photoFailed',
+  'Current password is incorrect': 'errorWrongPassword',
+  'That is already your email': 'errorSameEmail',
+  'That email is already used by another account': 'errorEmailTaken',
+  'Invalid or expired link': 'errorLinkExpired',
 };
 
 const statusMessages: Record<number, MessageKey> = {

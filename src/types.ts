@@ -110,6 +110,8 @@ export type AuthUser = {
   email: string;
   display_name: string;
   role: 'user' | 'moderator';
+  /** Public URL of the profile photo, or null for the initial. */
+  avatar_url?: string | null;
 };
 
 /** Returned by the backend when a user signs in, confirms their email, or resets their password. */

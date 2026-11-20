@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  ArrowDownToLine, ArrowRight, ArrowUpFromLine, Bell, BookOpen, Check, CheckCircle2, ChevronRight, Handshake, Inbox,
-  Hourglass, LayoutDashboard, Leaf, Library, LogOut, Mail, MapPin, MessageCircle, Pencil, Plus, Quote, Repeat, Send, ShieldCheck, Wallet,
+  ArrowDownToLine, ArrowRight, ArrowUpFromLine, BookOpen, Check, CheckCircle2, ChevronRight, Handshake, Inbox,
+  Hourglass, LayoutDashboard, Leaf, Library, LogOut, Mail, MapPin, MessageCircle, Pencil, Plus, Quote, Repeat, Send, Settings, ShieldCheck, Wallet,
 } from 'lucide-react';
-import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { CountBadge, awaitsConfirmation, useActivity } from '../activity';
@@ -21,6 +21,8 @@ import { useToast } from '../components/ui/toast';
 import { BookCover, StatusPill, typeTones } from '../components/book';
 import { ChatThread, PromoCodeField, TopUpNotice, fill, useEgp } from '../components/deals';
 import { InstallCard } from '../components/install-card';
+import { Avatar } from '../components/avatar';
+import { useSignOutFlow } from '../components/user-menu';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
@@ -33,13 +35,10 @@ const iconTile = 'grid h-11 w-11 flex-none place-items-center rounded-xl';
 const statusEdge: Record<string, string> = { active: 'bg-glaze', reserved: 'bg-ochre', sold: 'bg-cobalt', exchanged: 'bg-cobalt' };
 
 export function AccountLayout() {
-  const { session, signOut: endSession } = useAuth();
+  const { session } = useAuth();
   const { t } = useLanguage();
-  const confirm = useConfirm();
-  const toast = useToast();
-  const navigate = useNavigate();
   const displayName = session?.user.display_name || session?.user.email.split('@')[0] || '';
-  const { pendingIncoming, handoversNeedingYou, unreadNotifications } = useActivity();
+  const { pendingIncoming, handoversNeedingYou } = useActivity();
   const location = useLocation();
   const tabsRef = useRef<HTMLElement>(null);
   const tabs = [
@@ -48,7 +47,6 @@ export function AccountLayout() {
     { to: '/account/requests', label: t('requests'), icon: Inbox, count: pendingIncoming },
     { to: '/account/handovers', label: t('transactions'), icon: Handshake, count: handoversNeedingYou },
     { to: '/account/wallet', label: t('wallet'), icon: Wallet, count: 0 },
-    { to: '/account/notifications', label: t('navNotifications'), icon: Bell, count: unreadNotifications },
   ];
 
   // On phones the tabs scroll sideways; keep the current one in view (e.g. Wallet, the last tab).
@@ -56,13 +54,7 @@ export function AccountLayout() {
     tabsRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
   }, [location.pathname]);
 
-  const signOut = async () => {
-    const confirmed = await confirm({ title: t('confirmSignOutTitle'), description: t('confirmSignOutCopy'), confirmLabel: t('signOut'), cancelLabel: t('cancel') });
-    if (!confirmed) return;
-    endSession();
-    toast.success(t('signedOutToast'));
-    navigate('/', { replace: true });
-  };
+  const signOut = useSignOutFlow();
 
   return (
     <div className={cn(ui.wrap, ui.page)}>
@@ -70,9 +62,7 @@ export function AccountLayout() {
       <div className="relative md:overflow-hidden md:rounded-card md:bg-surface md:shadow-card">
         <span className="absolute inset-x-0 top-0 hidden h-1 bg-gradient-to-r from-glaze-deep via-glaze to-cobalt md:block rtl:bg-gradient-to-l" aria-hidden="true" />
         <header className="flex items-start gap-4 rounded-card bg-sunk p-5 md:items-center md:gap-6 md:rounded-none md:bg-transparent md:p-8 lg:p-10">
-          <span className="grid h-14 w-14 flex-none place-items-center rounded-card bg-sunk-3 font-book text-headline-md font-semibold text-glaze shadow-[inset_0_2px_4px_rgb(0_0_0/.06)] md:h-20 md:w-20 md:text-headline-lg" aria-hidden="true">
-            {displayName.slice(0, 1).toUpperCase()}
-          </span>
+          <Avatar name={displayName} url={session?.user.avatar_url} className="h-14 w-14 text-headline-md md:h-20 md:w-20 md:text-headline-lg" />
           <div className="min-w-0 flex-1">
             <h1 className="font-book text-headline-md font-bold text-ink md:text-display-lg-mobile lg:text-display-lg ar:leading-[1.4] ar:tracking-normal">{t('hiName')} {displayName}</h1>
             <p className="mt-1 flex min-w-0 items-center gap-1.5 text-body-sm text-ink-2">
@@ -82,7 +72,11 @@ export function AccountLayout() {
           </div>
           <div className="flex flex-none items-center gap-2.5">
             <Link className={cn(buttonClass({ size: 'sm' }), 'hidden min-h-11 rounded-xl px-4 md:inline-flex')} to="/sell"><Plus size={18} aria-hidden="true" />{t('listBook')}</Link>
-            <Button variant="ghost" size="sm" className="min-h-11 rounded-xl px-3 md:bg-sunk [&:not(:disabled):hover]:text-pom" onClick={() => void signOut()}>
+            {/* On phones these live in the avatar menu in the header, leaving room for the name. */}
+            <Link to="/settings" className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'hidden min-h-11 rounded-xl bg-sunk px-3 md:inline-flex')}>
+              <Settings size={17} aria-hidden="true" />{t('navSettings')}
+            </Link>
+            <Button variant="ghost" size="sm" className="hidden min-h-11 rounded-xl bg-sunk px-3 md:inline-flex [&:not(:disabled):hover]:text-pom" onClick={() => void signOut()}>
               <LogOut size={17} className={ui.flipRtl} aria-hidden="true" />{t('signOut')}
             </Button>
           </div>
