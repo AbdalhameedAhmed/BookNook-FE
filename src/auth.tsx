@@ -20,6 +20,8 @@ type AuthContextValue = {
   signOut: () => void;
   /** Updates the signed-in user's details (e.g. a new profile photo) without a new token. */
   updateUser: (changes: Partial<AuthUser>) => void;
+  /** True once the user's details come from the server this visit (sign-in or the /auth/me refresh), not just this browser's saved copy. */
+  isVerified: boolean;
 };
 
 const STORAGE_KEY = 'rfoof.session';
@@ -31,6 +33,7 @@ const AuthContext = createContext<AuthContextValue>({
   signIn: () => undefined,
   signOut: () => undefined,
   updateUser: () => undefined,
+  isVerified: false,
 });
 
 function readStoredSession(): Session | null {
@@ -58,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const tokenRef = useRef<string | undefined>(undefined);
+  const [isVerified, setIsVerified] = useState(false);
 
   const updateSession = useCallback((next: Session | null) => {
     writeStoredSession(next);
@@ -71,12 +75,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       expires_at: Date.now() + response.expires_in * 1000,
       user: response.user,
     });
+    setIsVerified(true);
   }, [updateSession]);
 
   // Signing out also stops phone alerts on this browser, so a shared device stops getting them.
   const signOut = useCallback(() => {
     void disablePush(tokenRef.current);
     updateSession(null);
+    setIsVerified(false);
   }, [updateSession]);
 
   const updateUser = useCallback((changes: Partial<AuthUser>) => {
@@ -99,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let active = true;
     api.auth.me(stored.access_token)
-      .then((user) => { if (active) updateSession({ ...stored, user }); })
+      .then((user) => { if (active) { updateSession({ ...stored, user }); setIsVerified(true); } })
       .catch((reason) => { if (active && reason instanceof ApiError && reason.status === 401) updateSession(null); });
     return () => { active = false; };
   }, [updateSession]);
@@ -129,7 +135,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const value = useMemo(() => ({ session, isLoading, signIn, signOut, updateUser }), [session, isLoading, signIn, signOut, updateUser]);
+  const value = useMemo(
+    () => ({ session, isLoading, signIn, signOut, updateUser, isVerified }),
+    [session, isLoading, signIn, signOut, updateUser, isVerified],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

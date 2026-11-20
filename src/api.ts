@@ -66,6 +66,9 @@ export const api = {
       return (await apiRequest<{ avatar_url: string }>('/api/v1/me/avatar', token, { method: 'POST', body })).avatar_url;
     },
     removeAvatar: (token: string) => apiRequest<void>('/api/v1/me/avatar', token, { method: 'DELETE' }),
+    /** Records a taken (or skipped) guided tour on the account. Returns the updated list. */
+    completeTour: async (token: string, tourId: string) =>
+      (await apiRequest<{ completed_tours: string[] }>(`/api/v1/me/tours/${encodeURIComponent(tourId)}/complete`, token, { method: 'POST' })).completed_tours,
     /** Mails a confirmation link to `newEmail`; the email changes once it is opened. */
     changeEmail: (token: string, newEmail: string, currentPassword: string) =>
       apiRequest<{ message: string }>('/api/v1/me/email', token, postJson({ new_email: newEmail, current_password: currentPassword })),

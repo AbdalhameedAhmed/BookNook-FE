@@ -112,6 +112,8 @@ export type AuthUser = {
   role: 'user' | 'moderator';
   /** Public URL of the profile photo, or null for the initial. */
   avatar_url?: string | null;
+  /** Guided tours this account has taken (ids from src/tours/tours.ts). */
+  completed_tours?: string[];
 };
 
 /** Returned by the backend when a user signs in, confirms their email, or resets their password. */

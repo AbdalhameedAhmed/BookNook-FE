@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { LogOut, Settings, UserRound } from 'lucide-react';
+import { LifeBuoy, LogOut, Settings, UserRound } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { useLanguage } from '../i18n';
@@ -48,6 +48,7 @@ export function UserMenu() {
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls="account-menu"
+        data-tour="account-menu"
         onClick={toggle}
       >
         <span className="hidden max-w-[12ch] truncate text-end text-label-md font-semibold text-ink lg:block" aria-hidden="true">{name}</span>
@@ -65,6 +66,7 @@ export function UserMenu() {
           <nav className="grid gap-0.5 border-t border-line pt-2" aria-label={t('accountMenu')}>
             <Link to="/account" className={menuItem}><UserRound size={18} className="text-ink-2" aria-hidden="true" />{t('menuMyAccount')}</Link>
             <Link to="/settings" className={menuItem}><Settings size={18} className="text-ink-2" aria-hidden="true" />{t('navSettings')}</Link>
+            <Link to="/help" className={menuItem}><LifeBuoy size={18} className="text-ink-2" aria-hidden="true" />{t('navHelp')}</Link>
             <button type="button" className={cn(menuItem, 'hover:text-pom')} onClick={() => { close(); void signOut(); }}>
               <LogOut size={18} className="text-ink-2 rtl:-scale-x-100" aria-hidden="true" />{t('signOut')}
             </button>

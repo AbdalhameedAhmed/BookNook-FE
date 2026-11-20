@@ -9,6 +9,7 @@ import { dealMessages } from './messages/deals';
 import { promoMessages } from './messages/promos';
 import { notificationMessages } from './messages/notifications';
 import { settingsMessages } from './messages/settings';
+import { helpMessages } from './messages/help';
 
 const baseMessages = {
   en: {
@@ -55,8 +56,8 @@ const authMessages = {
 } as const;
 
 const messages = {
-  en: { ...baseMessages.en, ...authMessages.en, ...shellMessages.en, ...detailMessages.en, ...authPageMessages.en, ...editorMessages.en, ...accountMessages.en, ...walletMessages.en, ...dealMessages.en, ...promoMessages.en, ...notificationMessages.en, ...settingsMessages.en },
-  ar: { ...baseMessages.ar, ...authMessages.ar, ...shellMessages.ar, ...detailMessages.ar, ...authPageMessages.ar, ...editorMessages.ar, ...accountMessages.ar, ...walletMessages.ar, ...dealMessages.ar, ...promoMessages.ar, ...notificationMessages.ar, ...settingsMessages.ar },
+  en: { ...baseMessages.en, ...authMessages.en, ...shellMessages.en, ...detailMessages.en, ...authPageMessages.en, ...editorMessages.en, ...accountMessages.en, ...walletMessages.en, ...dealMessages.en, ...promoMessages.en, ...notificationMessages.en, ...settingsMessages.en, ...helpMessages.en },
+  ar: { ...baseMessages.ar, ...authMessages.ar, ...shellMessages.ar, ...detailMessages.ar, ...authPageMessages.ar, ...editorMessages.ar, ...accountMessages.ar, ...walletMessages.ar, ...dealMessages.ar, ...promoMessages.ar, ...notificationMessages.ar, ...settingsMessages.ar, ...helpMessages.ar },
 } as const;
 
 export type Language = keyof typeof messages;

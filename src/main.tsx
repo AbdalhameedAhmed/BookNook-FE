@@ -9,6 +9,7 @@ import { ToastProvider } from './components/ui/toast';
 import { ConfirmProvider } from './components/ui/dialog';
 import { ThemeProvider } from './theme';
 import { ActivityProvider } from './activity';
+import { TourProvider } from './tours/tour-provider';
 import './install';
 
 // The service worker shows phone alerts (public/sw.js). It does no caching. Registering it on load
@@ -34,7 +35,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <FeedbackProviders>
             <AuthProvider>
               <ActivityProvider>
-                <App />
+                <TourProvider>
+                  <App />
+                </TourProvider>
               </ActivityProvider>
             </AuthProvider>
           </FeedbackProviders>

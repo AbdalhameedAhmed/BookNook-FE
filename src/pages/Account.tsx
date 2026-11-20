@@ -87,6 +87,7 @@ export function AccountLayout() {
               key={to}
               to={to}
               end={end}
+              data-tour={`tab-${to.split('/').pop()}`}
               className={({ isActive }) => cn(
                 'relative inline-flex min-h-11 flex-none items-center gap-2 whitespace-nowrap rounded-full px-4 text-label-lg font-semibold transition-colors md:rounded-b-none md:rounded-t-xl md:py-3',
                 isActive
@@ -608,7 +609,7 @@ export function RequestsPage() {
 
   return (
     <div className="grid gap-10 md:gap-12">
-      <section aria-labelledby="incoming-heading">
+      <section aria-labelledby="incoming-heading" data-tour="requests-incoming">
         <div className={listHead}>
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
@@ -622,7 +623,7 @@ export function RequestsPage() {
           ? <EmptyState size="compact" icon={<Inbox size={22} />} title={t('noIncoming')} description={t('noRequestsCopy')} />
           : <ul className="grid gap-4">{incoming.map((request) => renderRequest(request, true))}</ul>}
       </section>
-      <section aria-labelledby="outgoing-heading">
+      <section aria-labelledby="outgoing-heading" data-tour="requests-outgoing">
         <div className={listHead}>
           <div>
             <h2 id="outgoing-heading" className={listTitle}>{t('outgoingRequests')}</h2>

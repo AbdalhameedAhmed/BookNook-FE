@@ -226,7 +226,7 @@ function ListingForm({ initial }: { initial: Listing | null }) {
   return (
     <div className="grid items-start gap-6 wide:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_368px]">
       <form className="flex min-w-0 flex-col gap-6" onSubmit={submit} noValidate>
-        <section className={sectionCard} aria-labelledby="group-book">
+        <section className={sectionCard} aria-labelledby="group-book" data-tour="listing-details">
           <SectionHead
             id="group-book"
             step={1}
@@ -251,6 +251,7 @@ function ListingForm({ initial }: { initial: Listing | null }) {
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => { event.preventDefault(); pickPhoto(event.dataTransfer.files?.[0] ?? null); }}
                 aria-labelledby="listing-photo-label listing-photo-action"
+                data-tour="listing-photo"
                 aria-required="true"
                 aria-invalid={errors.photo ? true : undefined}
                 aria-describedby={errors.photo ? 'listing-photo-error listing-photo-hint' : 'listing-photo-hint'}
@@ -300,7 +301,7 @@ function ListingForm({ initial }: { initial: Listing | null }) {
         <section className={sectionCard} aria-labelledby="group-pass">
           <SectionHead id="group-pass" step={2} title={t('passingOn')} lead={t('editorPassLead')} tone="bg-cobalt-soft text-cobalt-ink" />
 
-          <fieldset className={ui.field}>
+          <fieldset className={ui.field} data-tour="listing-type">
             <legend className={legend}>{t('howPassOn')}{required}</legend>
             <div className="grid gap-2.5 sm:grid-cols-3">
               {types.map((item) => {
@@ -337,7 +338,7 @@ function ListingForm({ initial }: { initial: Listing | null }) {
             </div>
           ) : null}
 
-          <div className={ui.field}>
+          <div className={ui.field} data-tour="listing-area">
             <label className={ui.label} htmlFor="listing-area">{t('approximateArea')}{required}</label>
             <div className="relative">
               <input id="listing-area" className={cn(ui.control, 'pe-11')} list={areaListId} value={area} onChange={(event) => { setArea(event.target.value); setFieldError('area'); }} maxLength={100} autoComplete="off" aria-required="true" {...invalid('area')} aria-describedby={errors.area ? 'listing-area-error listing-area-hint' : 'listing-area-hint'} />
@@ -390,7 +391,7 @@ function ListingForm({ initial }: { initial: Listing | null }) {
           )}
           <div className="flex items-center gap-2">
             <Link className={cn(buttonClass({ variant: 'ghost' }), 'hidden xs:inline-flex')} to="/account/books">{t('cancel')}</Link>
-            <Button type="submit" className="flex-1 sm:flex-initial" loading={busy}>
+            <Button type="submit" className="flex-1 sm:flex-initial" loading={busy} data-tour="listing-publish">
               {busy ? t('saving') : initial ? t('saveChanges') : t('publish')}
               {busy ? null : <ArrowRight size={18} className={ui.flipRtl} aria-hidden="true" />}
             </Button>

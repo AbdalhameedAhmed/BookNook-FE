@@ -80,7 +80,7 @@ export function WalletPage() {
     <div className="grid gap-8 md:gap-10">
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="grid content-start gap-4 lg:col-span-5">
-          <section className={cn(ui.card, 'relative overflow-hidden p-5 md:p-6')} aria-labelledby="wallet-balance-heading">
+          <section className={cn(ui.card, 'relative overflow-hidden p-5 md:p-6')} aria-labelledby="wallet-balance-heading" data-tour="wallet-balance">
             <span className="pointer-events-none absolute -end-10 -top-10 h-36 w-36 rounded-full bg-glaze-fixed/40 blur-2xl" aria-hidden="true" />
             <div className="relative flex items-center gap-3">
               <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-glaze-fixed text-glaze-deep" aria-hidden="true"><WalletIcon size={22} /></span>
@@ -109,7 +109,7 @@ export function WalletPage() {
       </div>
 
       {wallet.entries.length ? (
-        <section aria-labelledby="wallet-activity-heading">
+        <section aria-labelledby="wallet-activity-heading" data-tour="wallet-activity">
           <h2 id="wallet-activity-heading" className={cn(ui.blockTitle, 'text-ink')}>{t('walletActivity')}</h2>
           <ul className={cn(ui.card, 'divide-y divide-line px-4 md:px-5')}>
             {wallet.entries.map((entry) => (
@@ -170,7 +170,7 @@ function ChargingOptionCard({ recipient }: { recipient: string }) {
   };
 
   return (
-    <section className={cn(ui.card, 'p-5 md:p-6')} aria-labelledby="charging-options-heading">
+    <section className={cn(ui.card, 'p-5 md:p-6')} aria-labelledby="charging-options-heading" data-tour="wallet-options">
       <h2 id="charging-options-heading" className="font-book text-headline-sm font-semibold text-ink ar:leading-[1.5]">{t('chargingOptions')}</h2>
       {/* Only one method exists today, so it is shown as the chosen option rather than a real choice. */}
       <div className="mt-4 flex items-start gap-3 rounded-xl border-2 border-glaze bg-glaze-soft/40 p-4">
@@ -269,7 +269,7 @@ function TopupForm({ className, onSubmitted }: { className?: string; onSubmitted
   });
 
   return (
-    <form className={cn(ui.card, 'grid content-start gap-5 p-5 md:p-6', className)} onSubmit={(event) => void submit(event)} noValidate aria-labelledby="topup-form-heading">
+    <form className={cn(ui.card, 'grid content-start gap-5 p-5 md:p-6', className)} onSubmit={(event) => void submit(event)} noValidate aria-labelledby="topup-form-heading" data-tour="wallet-topup">
       <h2 id="topup-form-heading" className="font-book text-headline-sm font-semibold text-ink ar:leading-[1.5]">{t('chargeWallet')}</h2>
 
       <div className="grid gap-5 sm:grid-cols-2">

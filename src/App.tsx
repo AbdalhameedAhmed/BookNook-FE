@@ -16,6 +16,7 @@ import { NotificationsPage } from './pages/Notifications';
 import { SettingsLayout, SettingsNotifications, SettingsProfile, SettingsSignIn } from './pages/Settings';
 import { NotificationTray } from './components/notification-tray';
 import { UserMenu } from './components/user-menu';
+import HelpCenter from './pages/Help';
 import { AdminHandoversPage, AdminLayout, AdminOverviewPage, AdminPromosPage, AdminTopupsPage } from './pages/Admin';
 import { useLanguage } from './i18n';
 import { useTheme } from './theme';
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="notifications" element={<Navigate to="/notifications" replace />} />
           <Route path="settings" element={<Navigate to="/settings" replace />} />
         </Route>
+        <Route path="/help" element={<HelpCenter />} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
           <Route index element={<SettingsProfile />} />
@@ -103,13 +105,13 @@ function SiteLayout() {
           <Wordmark />
           <nav className="hidden items-center gap-1 rounded-xl bg-sunk p-1 md:flex" aria-label={t('mainNav')}>
             <NavLink to="/" end className={topnavClass}>{t('navBrowse')}</NavLink>
-            {session ? <NavLink to="/account/requests" className={topnavClass}>{t('navRequests')}<CountBadge count={pendingIncoming} label={attention(pendingIncoming)} /></NavLink> : null}
-            {session ? <NavLink to="/account" end className={topnavClass}>{t('navAccount')}<CountBadge count={handoversNeedingYou} label={attention(handoversNeedingYou)} /></NavLink> : null}
+            {session ? <NavLink to="/account/requests" className={topnavClass} data-tour="nav-requests">{t('navRequests')}<CountBadge count={pendingIncoming} label={attention(pendingIncoming)} /></NavLink> : null}
+            {session ? <NavLink to="/account" end className={topnavClass} data-tour="nav-account">{t('navAccount')}<CountBadge count={handoversNeedingYou} label={attention(handoversNeedingYou)} /></NavLink> : null}
             {isModerator ? <NavLink to="/admin" className={topnavClass}>{t('navAdmin')}</NavLink> : null}
           </nav>
           <div className="ms-auto flex items-center gap-2">
             {session
-              ? <NavLink to="/sell" className={cn(buttonClass({ size: 'sm' }), 'hidden sm:inline-flex')}><Plus size={18} aria-hidden="true" />{t('listBook')}</NavLink>
+              ? <NavLink to="/sell" className={cn(buttonClass({ size: 'sm' }), 'hidden sm:inline-flex')} data-tour="list-book"><Plus size={18} aria-hidden="true" />{t('listBook')}</NavLink>
               : <Link to={sellTarget} state={sellState} className={cn(buttonClass({ size: 'sm' }), 'hidden sm:inline-flex')}><Plus size={18} aria-hidden="true" />{t('listBook')}</Link>}
             {session ? <NotificationTray buttonClassName={topbarButton} /> : null}
             <button
@@ -156,7 +158,10 @@ function SiteLayout() {
           </div>
           <div className="flex flex-col gap-2 border-t border-line-strong/40 pt-5 text-label-md text-ink-3 sm:flex-row sm:justify-between">
             <p>© {new Date().getFullYear()} {t('brandName')}. {t('detailSafety')}</p>
-            <p>{t('footerTagline')}</p>
+            <p className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link to="/help" className="font-semibold text-ink-2 underline-offset-[3px] hover:text-glaze-deep hover:underline">{t('navHelp')}</Link>
+              <span>{t('footerTagline')}</span>
+            </p>
           </div>
         </div>
       </footer>
@@ -164,15 +169,15 @@ function SiteLayout() {
       <nav className="fixed inset-x-0 bottom-0 z-[45] grid auto-cols-[1fr] grid-flow-col border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden" aria-label={t('mainNav')}>
         <NavLink to="/" end className={tabbarClass}><Compass size={22} aria-hidden="true" /><span>{t('navBrowse')}</span></NavLink>
         {session
-          ? <NavLink to="/sell" className={tabbarClass}><PlusCircle size={22} aria-hidden="true" /><span>{t('listBook')}</span></NavLink>
+          ? <NavLink to="/sell" className={tabbarClass} data-tour="list-book"><PlusCircle size={22} aria-hidden="true" /><span>{t('listBook')}</span></NavLink>
           : <Link to={sellTarget} state={sellState} className={tabbarLink}><PlusCircle size={22} aria-hidden="true" /><span>{t('listBook')}</span></Link>}
         {session ? (
           <>
-            <NavLink to="/account/requests" className={tabbarClass}>
+            <NavLink to="/account/requests" className={tabbarClass} data-tour="nav-requests">
               <span className="relative"><Inbox size={22} aria-hidden="true" /><CountBadge className="absolute -end-3 -top-1.5" count={pendingIncoming} label={attention(pendingIncoming)} /></span>
               <span>{t('navRequests')}</span>
             </NavLink>
-            <NavLink to="/account" end className={tabbarClass}>
+            <NavLink to="/account" end className={tabbarClass} data-tour="nav-account">
               <span className="relative"><UserRound size={22} aria-hidden="true" /><CountBadge className="absolute -end-3 -top-1.5" count={handoversNeedingYou} label={attention(handoversNeedingYou)} /></span>
               <span>{t('navAccount')}</span>
             </NavLink>

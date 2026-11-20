@@ -38,6 +38,7 @@ export function NotificationTray({ buttonClassName }: { buttonClassName: string 
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls="notification-tray"
+        data-tour="bell"
         onClick={toggle}
       >
         <Bell size={18} aria-hidden="true" />
