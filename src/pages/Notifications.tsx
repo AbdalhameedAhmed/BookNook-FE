@@ -11,6 +11,8 @@ import { useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { describeError } from '../errors';
 import { disablePush, enablePush, getPushState } from '../push';
+import { needsIosInstall } from '../install';
+import { InstallCard } from '../components/install-card';
 import type { PushState } from '../push';
 import type { AppNotification, NotificationKind } from '../types';
 import { Alert } from '../components/ui/alert';
@@ -124,6 +126,7 @@ export function NotificationsPage() {
 
   return (
     <section aria-labelledby="notifications-heading" aria-busy={loading} className="grid gap-6">
+      <InstallCard dismissible={false} />
       <PushCard />
       <div>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-line-strong/30 pb-3">
@@ -215,8 +218,8 @@ function PushCard() {
     return () => { active = false; };
   }, []);
 
-  // Push switched off on the server: nothing to offer.
-  if (state === null || state === 'unavailable') return null;
+  // Push switched off on the server: nothing to offer. On iPhone in Safari, the install card explains alerts.
+  if (state === null || state === 'unavailable' || (state === 'unsupported' && needsIosInstall())) return null;
 
   const turnOn = async () => {
     if (!session) return;

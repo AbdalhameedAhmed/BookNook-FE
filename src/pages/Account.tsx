@@ -20,6 +20,7 @@ import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 import { BookCover, StatusPill, typeTones } from '../components/book';
 import { ChatThread, PromoCodeField, TopUpNotice, fill, useEgp } from '../components/deals';
+import { InstallCard } from '../components/install-card';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
@@ -156,6 +157,7 @@ export function AccountOverview() {
   return (
     // min-w-0 on each child: the horizontally scrolling shelf must not widen the page on phones.
     <div className="grid gap-8 md:gap-10 [&>*]:min-w-0">
+      <InstallCard />
       <ul className="grid grid-cols-3 gap-2.5 md:gap-6" aria-busy={loading}>
         <StatTile label={t('statOnShelf')} note={t('statOnShelfNote')} value={onShelf} loading={loading} icon={<Library size={22} />} tone="bg-sunk-2 text-glaze-deep" valueTone="text-glaze-deep" />
         <StatTile label={t('statHandedOver')} note={t('statHandedOverNote')} value={handedOver} loading={loading} icon={<ShieldCheck size={22} />} tone="bg-cobalt-soft text-cobalt" valueTone="text-cobalt" />

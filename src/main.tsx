@@ -9,6 +9,13 @@ import { ToastProvider } from './components/ui/toast';
 import { ConfirmProvider } from './components/ui/dialog';
 import { ThemeProvider } from './theme';
 import { ActivityProvider } from './activity';
+import './install';
+
+// The service worker shows phone alerts (public/sw.js). It does no caching. Registering it on load
+// also lets browsers that require one offer "Install app".
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => undefined); });
+}
 
 function FeedbackProviders({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
