@@ -1,5 +1,5 @@
 import type {
-  AdminOverview, AdminTopup, AuthUser, ChatMessage, Listing, ListingPayload, BookRequest, NotificationPage, PromoCode, PromoPreview,
+  AdminOverview, AdminTopup, AuthUser, PublicProfile, ChatMessage, Listing, ListingPayload, BookRequest, NotificationPage, PromoCode, PromoPreview,
   SessionResponse, TopupStatus, Transaction, Wallet, WalletTopup,
 } from './types';
 import { ApiError, NetworkError, readDetail } from './errors';
@@ -73,8 +73,13 @@ export const api = {
     changeEmail: (token: string, newEmail: string, currentPassword: string) =>
       apiRequest<{ message: string }>('/api/v1/me/email', token, postJson({ new_email: newEmail, current_password: currentPassword })),
   },
-  listings: (filters: { q?: string; listingType?: string; condition?: string; page?: number; pageSize?: number } = {}) => {
+  listings: (filters: {
+    q?: string; listingType?: string; condition?: string; page?: number; pageSize?: number;
+    sellerId?: string; sort?: 'newest' | 'price_asc';
+  } = {}) => {
     const params = new URLSearchParams();
+    if (filters.sellerId) params.set('seller_id', filters.sellerId);
+    if (filters.sort && filters.sort !== 'newest') params.set('sort', filters.sort);
     if (filters.q) params.set('q', filters.q);
     if (filters.listingType) params.set('listing_type', filters.listingType);
     if (filters.condition) params.set('condition', filters.condition);
@@ -84,6 +89,8 @@ export const api = {
     return apiRequest<{ items: Listing[]; total: number }>(`/api/v1/listings${search ? `?${search}` : ''}`);
   },
   listing: (id: string) => apiRequest<Listing>(`/api/v1/listings/${id}`),
+  /** Public seller profile: no email, phone, wallet or requests. */
+  publicProfile: (userId: string) => apiRequest<PublicProfile>(`/api/v1/users/${encodeURIComponent(userId)}`),
   myListings: async (token: string) => (await apiRequest<{ items: Listing[] }>('/api/v1/me/listings', token)).items,
   uploadListingImage: (token: string, file: File) => {
     const body = new FormData();
@@ -123,6 +130,9 @@ export const api = {
   completeTransaction: (token: string, id: string) => apiRequest<Transaction>(`/api/v1/transactions/${id}/complete`, token, { method: 'POST' }),
   reportListing: (token: string, id: string, reason: string, details: string | null) => apiRequest('/api/v1/reports', token, {
     method: 'POST', body: JSON.stringify({ listing_id: id, reason, details }),
+  }),
+  reportUser: (token: string, userId: string, reason: string, details: string | null) => apiRequest('/api/v1/reports', token, {
+    method: 'POST', body: JSON.stringify({ reported_user_id: userId, reason, details }),
   }),
   wallet: (token: string) => apiRequest<Wallet>('/api/v1/wallet', token),
   createTopup: (token: string, topup: { senderNumber: string; amountEgp: number; receipt: File }) => {

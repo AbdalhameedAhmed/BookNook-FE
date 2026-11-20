@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Ban, BookX, Camera, ChevronRight, EyeOff, Flag, HandHeart, Handshake, Info, Lock, MapPin, MoreHorizontal, Navigation, Send, ShieldAlert, ShieldCheck, Sun, UserX } from 'lucide-react';
+import { Ban, BookX, Camera, ChevronRight, Flag, HandHeart, Handshake, Lock, MapPin, Navigation, Send, ShieldCheck, Sun } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
@@ -11,11 +11,11 @@ import { describeError, isNotFound } from '../errors';
 import { listingImage, priceLabel, timeAgo } from '../lib/listing';
 import { Alert } from '../components/ui/alert';
 import { Button, buttonClass } from '../components/ui/button';
-import { Dialog, dialogFooter } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 import { BookCover, StatusPill, TypeTag, coverSkeleton } from '../components/book';
 import { CostBreakdown, PromoCodeField, TopUpNotice, fill, useEgp } from '../components/deals';
+import { ReportDialog } from '../components/report-dialog';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
@@ -307,10 +307,15 @@ export default function BookDetail() {
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-glaze font-book text-headline-sm font-semibold text-on-glaze" aria-hidden="true">
                 {listing.seller_name.trim().charAt(0).toUpperCase() || '?'}
               </span>
-              <div className="grid min-w-0">
+              <div className="grid min-w-0 flex-1">
                 <span className="text-label-sm font-medium text-ink-3">{t('listedBy')}</span>
-                <span className="text-title-lg font-bold text-ink [overflow-wrap:anywhere]">{listing.seller_name}</span>
+                <Link to={`/users/${listing.seller_id}`} state={{ from: `/books/${listing.id}` }} className="text-title-lg font-bold text-ink [overflow-wrap:anywhere] hover:text-glaze-deep hover:underline hover:underline-offset-[3px]">
+                  {listing.seller_name}
+                </Link>
               </div>
+              <Link to={`/users/${listing.seller_id}`} state={{ from: `/books/${listing.id}` }} className={cn(buttonClass({ variant: 'secondary', size: 'sm' }), 'min-h-10 flex-none')}>
+                {t('viewProfile')}<ChevronRight size={16} className={ui.flipRtl} aria-hidden="true" />
+              </Link>
             </div>
             <p className="flex items-start gap-2 rounded-lg bg-sunk-3/60 px-4 py-2 text-label-sm font-medium text-ink-2">
               <Lock size={14} className="mt-px shrink-0 text-ink-3" aria-hidden="true" />
@@ -421,76 +426,8 @@ export default function BookDetail() {
           </div>
         </div>
       ) : null}
-      {session ? <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} listingId={listing.id} token={session.access_token} /> : null}
+      {session ? <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} target={{ listingId: listing.id }} token={session.access_token} /> : null}
     </div>
-  );
-}
-
-const reportReasons: Array<{ value: string; label: MessageKey; icon: typeof Info }> = [
-  { value: 'inappropriate', label: 'reasonInappropriate', icon: EyeOff },
-  { value: 'misleading', label: 'reasonMisleading', icon: Info },
-  { value: 'spam_or_scam', label: 'reasonSpam', icon: ShieldAlert },
-  { value: 'personal_info', label: 'reasonPersonalInfo', icon: UserX },
-  { value: 'other', label: 'reasonOther', icon: MoreHorizontal },
-];
-
-function ReportDialog({ open, onClose, listingId, token }: { open: boolean; onClose: () => void; listingId: string; token: string }) {
-  const { t } = useLanguage();
-  const toast = useToast();
-  const [reason, setReason] = useState(reportReasons[0].value);
-  const [details, setDetails] = useState('');
-  const [error, setError] = useState('');
-  const [sending, setSending] = useState(false);
-
-  const close = () => {
-    if (sending) return;
-    setError('');
-    onClose();
-  };
-
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSending(true);
-    setError('');
-    try {
-      await api.reportListing(token, listingId, reason, details.trim() || null);
-      toast.success(t('reportSent'));
-      setDetails('');
-      onClose();
-    } catch (failure) {
-      setError(describeError(failure, t, 'reportFailed'));
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onClose={close} title={t('reportListing')} description={t('reportCopy')} icon={<Flag size={20} />} tone="danger" closeLabel={t('dismiss')}>
-      <form className={ui.stack} onSubmit={submit}>
-        <fieldset className="grid gap-2">
-          <legend className={cn(ui.label, 'mb-2')}>{t('reportReason')}</legend>
-          {reportReasons.map(({ value, label, icon: Icon }) => (
-            <label
-              key={value}
-              className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl bg-sunk px-4 py-2.5 text-body-lg font-medium text-ink transition-colors hover:bg-sunk-2 has-[:checked]:bg-glaze-soft/60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-glaze"
-            >
-              <Icon size={20} className="shrink-0 text-ink-2" aria-hidden="true" />
-              <span className="flex-1">{t(label)}</span>
-              <input className="h-5 w-5 shrink-0 accent-glaze" type="radio" name="report-reason" value={value} checked={reason === value} onChange={() => setReason(value)} />
-            </label>
-          ))}
-        </fieldset>
-        <div className={ui.field}>
-          <label className={ui.label} htmlFor="report-details">{t('reportDetails')} <span className={ui.optional}>{t('optional')}</span></label>
-          <textarea id="report-details" className={cn(ui.control, ui.textarea)} value={details} onChange={(event) => setDetails(event.target.value)} rows={3} maxLength={1000} placeholder={t('reportDetailsPlaceholder')} />
-        </div>
-        {error ? <Alert title={t('reportFailed')}>{error}</Alert> : null}
-        <div className={dialogFooter}>
-          <Button variant="secondary" onClick={close} disabled={sending}>{t('cancel')}</Button>
-          <Button type="submit" variant="danger" loading={sending}>{t('sendReport')}</Button>
-        </div>
-      </form>
-    </Dialog>
   );
 }
 

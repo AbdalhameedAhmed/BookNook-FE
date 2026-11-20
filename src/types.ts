@@ -210,3 +210,15 @@ export type AppNotification = {
 };
 
 export type NotificationPage = { items: AppNotification[]; unread_count: number };
+
+/** A reader's public profile (GET /api/v1/users/{id}). */
+export type PublicProfile = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  /** Approximate locality only. */
+  area: string | null;
+  member_since: string | null;
+  available: { total: number; sale: number; exchange: number; free: number };
+  handed_over: number;
+};
