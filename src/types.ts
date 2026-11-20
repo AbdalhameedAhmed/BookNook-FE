@@ -182,3 +182,25 @@ export type PromoCode = {
   active: boolean;
   created_at: string;
 };
+
+export type NotificationKind =
+  | 'request_new' | 'request_accepted' | 'request_rejected' | 'request_unavailable' | 'request_cancelled'
+  | 'deal_confirmed_by_other' | 'deal_completed' | 'deal_cancelled' | 'message'
+  | 'topup_approved' | 'topup_rejected';
+
+/** An in-app notification. `data` is plain display text from the server; never render it as HTML. */
+export type AppNotification = {
+  id: string;
+  kind: NotificationKind;
+  transaction_id: string | null;
+  request_id: string | null;
+  listing_id: string | null;
+  topup_id?: string | null;
+  data: { listing_title?: string; actor_name?: string; amount_egp?: number; preview?: string; note?: string };
+  /** Chat messages collapse into one notification per handover while unread. */
+  count: number;
+  read_at: string | null;
+  created_at: string;
+};
+
+export type NotificationPage = { items: AppNotification[]; unread_count: number };

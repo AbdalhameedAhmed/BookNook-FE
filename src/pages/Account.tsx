@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  ArrowDownToLine, ArrowRight, ArrowUpFromLine, BookOpen, Check, CheckCircle2, ChevronRight, Handshake, Inbox,
+  ArrowDownToLine, ArrowRight, ArrowUpFromLine, Bell, BookOpen, Check, CheckCircle2, ChevronRight, Handshake, Inbox,
   Hourglass, LayoutDashboard, Leaf, Library, LogOut, Mail, MapPin, MessageCircle, Pencil, Plus, Quote, Repeat, Send, ShieldCheck, Wallet,
 } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -38,7 +38,7 @@ export function AccountLayout() {
   const toast = useToast();
   const navigate = useNavigate();
   const displayName = session?.user.display_name || session?.user.email.split('@')[0] || '';
-  const { pendingIncoming, handoversNeedingYou } = useActivity();
+  const { pendingIncoming, handoversNeedingYou, unreadNotifications } = useActivity();
   const location = useLocation();
   const tabsRef = useRef<HTMLElement>(null);
   const tabs = [
@@ -47,6 +47,7 @@ export function AccountLayout() {
     { to: '/account/requests', label: t('requests'), icon: Inbox, count: pendingIncoming },
     { to: '/account/handovers', label: t('transactions'), icon: Handshake, count: handoversNeedingYou },
     { to: '/account/wallet', label: t('wallet'), icon: Wallet, count: 0 },
+    { to: '/account/notifications', label: t('navNotifications'), icon: Bell, count: unreadNotifications },
   ];
 
   // On phones the tabs scroll sideways; keep the current one in view (e.g. Wallet, the last tab).

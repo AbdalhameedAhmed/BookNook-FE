@@ -1,6 +1,6 @@
 import type {
-  AdminOverview, AdminTopup, AuthUser, ChatMessage, Listing, ListingPayload, BookRequest, PromoCode, PromoPreview, SessionResponse, TopupStatus,
-  Transaction, Wallet, WalletTopup,
+  AdminOverview, AdminTopup, AuthUser, ChatMessage, Listing, ListingPayload, BookRequest, NotificationPage, PromoCode, PromoPreview,
+  SessionResponse, TopupStatus, Transaction, Wallet, WalletTopup,
 } from './types';
 import { ApiError, NetworkError, readDetail } from './errors';
 
@@ -115,6 +115,21 @@ export const api = {
     body.append('amount_egp', String(topup.amountEgp));
     body.append('receipt', topup.receipt);
     return apiRequest<WalletTopup>('/api/v1/wallet/topups', token, { method: 'POST', body });
+  },
+  notifications: {
+    list: (token: string, before?: string) =>
+      apiRequest<NotificationPage>(`/api/v1/me/notifications?limit=30${before ? `&before=${encodeURIComponent(before)}` : ''}`, token),
+    unreadCount: async (token: string) =>
+      (await apiRequest<{ unread_count: number }>('/api/v1/me/notifications/unread-count', token)).unread_count,
+    /** Omit `ids` to mark everything read. */
+    markRead: (token: string, ids?: string[]) =>
+      apiRequest<{ updated: number; unread_count: number }>('/api/v1/me/notifications/read', token, postJson(ids ? { ids } : {})),
+    /** 404 when the server has no VAPID keys (push switched off). */
+    pushPublicKey: async () => (await apiRequest<{ public_key: string }>('/api/v1/push/public-key')).public_key,
+    savePushSubscription: (token: string, subscription: PushSubscriptionJSON, lang: string) =>
+      apiRequest<void>('/api/v1/me/push-subscriptions', token, postJson({ endpoint: subscription.endpoint, keys: subscription.keys, lang })),
+    removePushSubscription: (token: string, endpoint: string) =>
+      apiRequest<void>('/api/v1/me/push-subscriptions/remove', token, postJson({ endpoint })),
   },
   admin: {
     overview: (token: string) => apiRequest<AdminOverview>('/api/v1/admin/overview', token),

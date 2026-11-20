@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { api, setUnauthorizedHandler } from './api';
 import { ApiError } from './errors';
 import { useLanguage } from './i18n';
+import { disablePush } from './push';
 import type { AuthUser, SessionResponse } from './types';
 
 /** A signed-in session issued by the Rfoof API. `expires_at` is a Unix time in milliseconds. */
@@ -53,9 +54,11 @@ function writeStoredSession(session: Session | null) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const tokenRef = useRef<string | undefined>(undefined);
 
   const updateSession = useCallback((next: Session | null) => {
     writeStoredSession(next);
+    tokenRef.current = next?.access_token;
     setSession(next);
   }, []);
 
@@ -67,12 +70,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, [updateSession]);
 
-  const signOut = useCallback(() => updateSession(null), [updateSession]);
+  // Signing out also stops phone alerts on this browser, so a shared device stops getting them.
+  const signOut = useCallback(() => {
+    void disablePush(tokenRef.current);
+    updateSession(null);
+  }, [updateSession]);
 
   // Restore the saved session, then confirm with the API that it is still valid.
   useEffect(() => {
     const stored = readStoredSession();
     if (!stored) writeStoredSession(null);
+    tokenRef.current = stored?.access_token;
     setSession(stored);
     setIsLoading(false);
     if (!stored) return;
@@ -100,7 +108,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Keep tabs in sync when the user signs in or out elsewhere.
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY) setSession(readStoredSession());
+      if (event.key !== STORAGE_KEY) return;
+      const next = readStoredSession();
+      tokenRef.current = next?.access_token;
+      setSession(next);
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);

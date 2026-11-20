@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Compass, Inbox, Library, Moon, Plus, PlusCircle, ShieldCheck, ShieldHalf, Sun, UserRound } from 'lucide-react';
+import { Bell, Compass, Inbox, Library, Moon, Plus, PlusCircle, ShieldCheck, ShieldHalf, Sun, UserRound } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { ProtectedRoute, useAuth } from './auth';
 import { CountBadge, useActivity } from './activity';
@@ -12,11 +12,13 @@ import ConfirmEmail from './pages/ConfirmEmail';
 import ListingEditor from './pages/ListingEditor';
 import { AccountLayout, AccountOverview, MyBooksPage, RequestsPage, TransactionsPage } from './pages/Account';
 import { WalletPage } from './pages/Wallet';
+import { NotificationsPage } from './pages/Notifications';
 import { AdminHandoversPage, AdminLayout, AdminOverviewPage, AdminPromosPage, AdminTopupsPage } from './pages/Admin';
 import { useLanguage } from './i18n';
 import { useTheme } from './theme';
 import { buttonClass } from './components/ui/button';
 import { cn } from './lib/utils';
+import { fill } from './components/deals';
 import { ui } from './lib/ui';
 
 export default function App() {
@@ -38,6 +40,7 @@ export default function App() {
           <Route path="handovers" element={<TransactionsPage />} />
           <Route path="transactions" element={<Navigate to="/account/handovers" replace />} />
           <Route path="wallet" element={<WalletPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
         </Route>
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route index element={<AdminOverviewPage />} />
@@ -74,7 +77,7 @@ function SiteLayout() {
 
   const displayName = session?.user.display_name || session?.user.email || '';
   const isModerator = session?.user.role === 'moderator';
-  const { pendingIncoming, handoversNeedingYou } = useActivity();
+  const { pendingIncoming, handoversNeedingYou, unreadNotifications } = useActivity();
   const attention = (count: number) => `${count} ${t('needsYou')}`;
   const sellTarget = session ? '/sell' : '/signin';
   const sellState = session ? undefined : { from: '/sell' };
@@ -99,6 +102,21 @@ function SiteLayout() {
             {session
               ? <NavLink to="/sell" className={cn(buttonClass({ size: 'sm' }), 'hidden sm:inline-flex')}><Plus size={18} aria-hidden="true" />{t('listBook')}</NavLink>
               : <Link to={sellTarget} state={sellState} className={cn(buttonClass({ size: 'sm' }), 'hidden sm:inline-flex')}><Plus size={18} aria-hidden="true" />{t('listBook')}</Link>}
+            {session ? (
+              <NavLink
+                to="/account/notifications"
+                className={({ isActive }) => cn(topbarButton, 'relative w-10', isActive && 'border-glaze bg-glaze-soft/40 text-glaze-deep')}
+                aria-label={unreadNotifications > 0 ? fill(t('notificationsUnread'), { count: unreadNotifications }) : t('navNotifications')}
+                title={t('navNotifications')}
+              >
+                <Bell size={18} aria-hidden="true" />
+                {unreadNotifications > 0 ? (
+                  <span className="absolute -end-1.5 -top-1.5 inline-grid min-w-5 place-items-center rounded-full bg-pom px-1 text-[11px] font-bold leading-5 text-white ring-2 ring-paper" aria-hidden="true">
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  </span>
+                ) : null}
+              </NavLink>
+            ) : null}
             <button
               type="button"
               className={cn(topbarButton, 'px-3 text-label-md font-semibold')}
