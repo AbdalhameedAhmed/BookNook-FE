@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowRight, AtSign, BookPlus, Eye, EyeOff, Handshake, Lock, MessageSquareText, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowRight, AtSign, BookPlus, Eye, EyeOff, Gift, Handshake, Lock, MessageSquareText, ShieldCheck, UserRound } from 'lucide-react';
 import { DecorativeShelf } from '../components/book';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
@@ -8,7 +8,7 @@ import { ui } from '../lib/ui';
 const switchButton = 'min-h-11 flex-1 rounded-ctl border-0 bg-transparent px-2 py-2 text-center text-label-lg font-semibold text-ink-2 transition-colors duration-200 hover:text-ink aria-pressed:bg-glaze aria-pressed:text-on-glaze aria-pressed:shadow-sm';
 const fieldLabel = 'text-label-md font-semibold text-ink';
 const fieldIcon = 'pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-ink-3';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { ApiError } from '../errors';
 import { useAuth } from '../auth';
@@ -24,6 +24,8 @@ type Field = 'displayName' | 'email' | 'password';
 type FieldErrors = Partial<Record<Field, MessageKey>>;
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Invite links look like /signin?invite=AB12CD34 (see docs/referrals.md). */
+const invitePattern = /^[A-Za-z0-9]{8}$/;
 const benefits: Array<{ title: MessageKey; copy: MessageKey; Icon: LucideIcon }> = [
   { title: 'authBenefitList', copy: 'authBenefitListCopy', Icon: BookPlus },
   { title: 'authBenefitRequest', copy: 'authBenefitRequestCopy', Icon: MessageSquareText },
@@ -40,7 +42,10 @@ export default function SignIn() {
   const destination = typeof redirectState?.from === 'string'
     ? redirectState.from
     : redirectState?.from?.pathname || '/account';
-  const [mode, setMode] = useState<'sign_in' | 'sign_up'>('sign_in');
+  const [searchParams] = useSearchParams();
+  const rawInvite = searchParams.get('invite')?.trim() ?? '';
+  const inviteCode = invitePattern.test(rawInvite) ? rawInvite.toUpperCase() : undefined;
+  const [mode, setMode] = useState<'sign_in' | 'sign_up'>(inviteCode ? 'sign_up' : 'sign_in');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -81,7 +86,7 @@ export default function SignIn() {
     setBusy(true);
     try {
       if (isSignUp) {
-        await api.auth.signUp(email.trim(), password, displayName.trim());
+        await api.auth.signUp(email.trim(), password, displayName.trim(), inviteCode);
         toast.success(t('accountCreatedToast'), t('checkInbox'));
         setCanResendCode(true);
         setMode('sign_in');
@@ -149,6 +154,16 @@ export default function SignIn() {
           <button type="button" className={switchButton} aria-pressed={!isSignUp} onClick={() => switchMode('sign_in')}>{t('signIn')}</button>
           <button type="button" className={switchButton} aria-pressed={isSignUp} onClick={() => switchMode('sign_up')}>{t('createAccount')}</button>
         </div>
+
+        {inviteCode && isSignUp ? (
+          <div className="flex items-start gap-3 rounded-xl bg-glaze/10 p-4" role="note">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-glaze/20 text-glaze-deep" aria-hidden="true"><Gift size={18} /></span>
+            <div className="grid gap-0.5">
+              <p className="text-label-md font-semibold text-glaze-deep">{t('inviteSignUpTitle')}</p>
+              <p className="text-body-sm text-ink-2">{t('inviteSignUpCopy')}</p>
+            </div>
+          </div>
+        ) : null}
 
         {formError ? (
           <Alert title={isSignUp ? t('signUpFailed') : t('signInFailed')} onDismiss={() => setFormError('')} dismissLabel={t('dismiss')}>

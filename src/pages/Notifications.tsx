@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import {
-  Ban, Bell, CheckCheck, CheckCircle2, Flag, Handshake, Inbox, MessageCircle, Settings, Undo2, Wallet, XCircle,
-} from 'lucide-react';
+import { Ban, Bell, CheckCheck, CheckCircle2, Flag, Gift, Handshake, Inbox, MessageCircle, Settings, Undo2, Wallet, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
@@ -37,6 +35,7 @@ export const notificationLinks: Record<NotificationKind, string> = {
   topup_rejected: '/account/wallet',
   topup_submitted: '/admin/topups',
   report_new: '/admin',
+  referral_reward: '/account/invite',
 };
 
 const looks: Record<NotificationKind, { icon: ReactNode; tone: string; text: MessageKey }> = {
@@ -53,6 +52,7 @@ const looks: Record<NotificationKind, { icon: ReactNode; tone: string; text: Mes
   topup_rejected: { icon: <Wallet size={20} />, tone: 'bg-pom-soft text-pom', text: 'notifTopupRejected' },
   topup_submitted: { icon: <Wallet size={20} />, tone: 'bg-ochre-soft text-ochre-ink', text: 'notifTopupSubmitted' },
   report_new: { icon: <Flag size={20} />, tone: 'bg-pom-soft text-pom', text: 'notifReportNew' },
+  referral_reward: { icon: <Gift size={20} />, tone: 'bg-glaze-soft text-glaze-deep', text: 'notifReferralReward' },
 };
 
 export function NotificationsPage() {

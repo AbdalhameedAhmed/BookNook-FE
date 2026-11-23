@@ -1,5 +1,5 @@
 import type {
-  AdminOverview, AdminTopup, AuthUser, PublicProfile, ChatMessage, Listing, ListingPayload, BookRequest, NotificationPage, PromoCode, PromoPreview,
+  AdminOverview, AdminTopup, AuthUser, InviteSummary, PublicProfile, ChatMessage, Listing, ListingPayload, BookRequest, NotificationPage, PromoCode, PromoPreview,
   SessionResponse, TopupStatus, Transaction, Wallet, WalletTopup,
 } from './types';
 import { ApiError, NetworkError, readDetail } from './errors';
@@ -42,8 +42,9 @@ const postJson = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.s
 
 export const api = {
   auth: {
-    signUp: (email: string, password: string, displayName: string) =>
-      apiRequest<{ message: string }>('/api/v1/auth/signup', undefined, postJson({ email, password, display_name: displayName })),
+    /** `inviteCode` comes from an invite link; the server ignores unknown codes. */
+    signUp: (email: string, password: string, displayName: string, inviteCode?: string) =>
+      apiRequest<{ message: string }>('/api/v1/auth/signup', undefined, postJson({ email, password, display_name: displayName, invite_code: inviteCode ?? null })),
     logIn: (email: string, password: string) =>
       apiRequest<SessionResponse>('/api/v1/auth/login', undefined, postJson({ email, password })),
     confirmEmail: (token: string) =>
@@ -72,6 +73,8 @@ export const api = {
     /** Mails a confirmation link to `newEmail`; the email changes once it is opened. */
     changeEmail: (token: string, newEmail: string, currentPassword: string) =>
       apiRequest<{ message: string }>('/api/v1/me/email', token, postJson({ new_email: newEmail, current_password: currentPassword })),
+    /** The user's invite code and free requests earned by inviting friends. */
+    invite: (token: string) => apiRequest<InviteSummary>('/api/v1/me/invite', token),
   },
   listings: (filters: {
     q?: string; listingType?: string; condition?: string; page?: number; pageSize?: number;

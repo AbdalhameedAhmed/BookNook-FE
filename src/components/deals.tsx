@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { MessageCircle, Send, ShieldCheck, TicketPercent, Wallet as WalletIcon, X } from 'lucide-react';
+import { Gift, MessageCircle, Send, ShieldCheck, TicketPercent, Wallet as WalletIcon, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
@@ -159,6 +159,17 @@ export function ChatThread({ transactionId, otherName, canSend }: { transactionI
       ) : <p className="text-body-sm text-ink-3">{t('chatClosed')}</p>}
       <p className="flex items-center gap-1.5 text-label-sm text-ink-3"><ShieldCheck size={14} aria-hidden="true" />{t('chatSafety')}</p>
     </section>
+  );
+}
+
+/** Shown where a free request (earned by inviting a friend) will waive the user's Rfoof fee. */
+export function FreeRequestNote() {
+  const { t } = useLanguage();
+  return (
+    <p className="flex items-start gap-2 rounded-xl bg-glaze/10 p-3.5 text-body-md text-ink">
+      <Gift size={18} className="mt-0.5 flex-none text-glaze-deep" aria-hidden="true" />
+      <span>{t('freeRequestNote')} <Link to="/account/invite" className="font-semibold text-glaze-deep hover:underline hover:underline-offset-[3px]">{t('freeRequestLink')}</Link></span>
+    </p>
   );
 }
 

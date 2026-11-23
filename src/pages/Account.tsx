@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  ArrowDownToLine, ArrowRight, ArrowUpFromLine, BookOpen, Check, CheckCircle2, ChevronRight, Handshake, Inbox,
+  ArrowDownToLine, ArrowRight, ArrowUpFromLine, BookOpen, Check, CheckCircle2, ChevronRight, Gift, Handshake, Inbox,
   Hourglass, LayoutDashboard, Leaf, Library, LogOut, Mail, MapPin, MessageCircle, Pencil, Plus, Quote, Repeat, Send, Settings, ShieldCheck, Wallet,
 } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useSearchParams } from 'react-router-dom';
@@ -19,7 +19,7 @@ import { useConfirm } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 import { BookCover, StatusPill, typeTones } from '../components/book';
-import { ChatThread, PromoCodeField, TopUpNotice, fill, useEgp } from '../components/deals';
+import { ChatThread, FreeRequestNote, PromoCodeField, TopUpNotice, fill, useEgp } from '../components/deals';
 import { InstallCard } from '../components/install-card';
 import { Avatar } from '../components/avatar';
 import { useSignOutFlow } from '../components/user-menu';
@@ -47,6 +47,7 @@ export function AccountLayout() {
     { to: '/account/requests', label: t('requests'), icon: Inbox, count: pendingIncoming },
     { to: '/account/handovers', label: t('transactions'), icon: Handshake, count: handoversNeedingYou },
     { to: '/account/wallet', label: t('wallet'), icon: Wallet, count: 0 },
+    { to: '/account/invite', label: t('inviteTab'), icon: Gift, count: 0 },
   ];
 
   // On phones the tabs scroll sideways; keep the current one in view (e.g. Wallet, the last tab).
@@ -457,7 +458,7 @@ export function RequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [wallet, setWallet] = useState<{ balance: number; fee: number } | null>(null);
+  const [wallet, setWallet] = useState<{ balance: number; fee: number; freeRequests: number } | null>(null);
   /** Exchange requests: which offered book the owner picked, by request id. */
   const [chosen, setChosen] = useState<Record<string, string>>({});
   /** Promo codes the seller/owner applied before accepting, by request id. */
@@ -470,7 +471,7 @@ export function RequestsPage() {
     try {
       const [activity, myWallet] = await Promise.all([api.activity(session.access_token), api.wallet(session.access_token)]);
       setRequests(activity.requests);
-      setWallet({ balance: myWallet.balance_egp, fee: myWallet.platform_fee_egp });
+      setWallet({ balance: myWallet.balance_egp, fee: myWallet.platform_fee_egp, freeRequests: myWallet.free_requests_available ?? 0 });
       setError('');
     }
     catch (reason) { setError(describeError(reason, t, 'requestFailed')); }
@@ -520,10 +521,12 @@ export function RequestsPage() {
     const isSwap = request.kind === 'exchange';
     const promo = promos[request.id] ?? null;
     // The seller/owner's own fee for this request, after any promo they applied.
-    const baseFee = request.kind === 'sale' ? Math.min(wallet?.fee ?? 0, request.price_egp) : wallet?.fee ?? 0;
-    const fee = Math.max(baseFee - (promo?.discount_egp ?? 0), 0);
-    const ownerShort = isIncoming && isSwap && wallet !== null && wallet.balance < fee;
     const paidKind = request.kind === 'sale' || isSwap;
+    const baseFee = !paidKind ? 0 : request.kind === 'sale' ? Math.min(wallet?.fee ?? 0, request.price_egp) : wallet?.fee ?? 0;
+    // Without a promo code, a free request (earned by inviting a friend) waives the whole fee.
+    const freeRequest = !promo && baseFee > 0 && (wallet?.freeRequests ?? 0) > 0;
+    const fee = freeRequest ? 0 : Math.max(baseFee - (promo?.discount_egp ?? 0), 0);
+    const ownerShort = isIncoming && isSwap && wallet !== null && wallet.balance < fee;
     const cannotAccept = isSwap && (!chosen[request.id] || ownerShort);
     return (
       <li key={request.id} className={cn(ui.card, 'grid gap-4 p-4 md:p-6', closed && 'bg-surface/60 opacity-80 shadow-none')}>
@@ -583,6 +586,7 @@ export function RequestsPage() {
           ? <TopUpNotice title={t('insufficientTitle')}>{fill(t('ownerFeeShort'), { fee: egp(fee), have: egp(wallet.balance) })}</TopUpNotice>
           : <p className="rounded-xl bg-cobalt-soft p-3.5 text-body-md text-ink">{fill(t('ownerFeeNote'), { fee: egp(fee), have: egp(wallet.balance) })}</p>
         ) : null}
+        {pending && isIncoming && freeRequest ? <FreeRequestNote /> : null}
         {pending && isIncoming && paidKind && baseFee > 0 ? (
           <PromoCodeField id={`promo-${request.id}`} applied={promo} onChange={(next) => setPromos((current) => ({ ...current, [request.id]: next }))} />
         ) : null}

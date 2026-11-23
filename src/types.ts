@@ -146,6 +146,8 @@ export type Wallet = {
   held_egp: number;
   entries: WalletEntry[];
   platform_fee_egp: number;
+  /** Fees waived automatically on the next requests/acceptances (earned by inviting friends). */
+  free_requests_available: number;
   options: ChargingOption[];
   topups: WalletTopup[];
 };
@@ -191,6 +193,8 @@ export type NotificationKind =
   | 'request_new' | 'request_accepted' | 'request_rejected' | 'request_unavailable' | 'request_cancelled'
   | 'deal_confirmed_by_other' | 'deal_completed' | 'deal_cancelled' | 'message'
   | 'topup_approved' | 'topup_rejected'
+  /** A friend who joined from the user's invite link completed a deal. */
+  | 'referral_reward'
   /** Moderators only. */
   | 'topup_submitted' | 'report_new';
 
@@ -221,4 +225,12 @@ export type PublicProfile = {
   member_since: string | null;
   available: { total: number; sale: number; exchange: number; free: number };
   handed_over: number;
+};
+
+/** GET /api/v1/me/invite. Counts only: friends are never named. */
+export type InviteSummary = {
+  invite_code: string;
+  friends_joined: number;
+  free_requests_earned: number;
+  free_requests_available: number;
 };

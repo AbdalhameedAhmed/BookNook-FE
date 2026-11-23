@@ -12,6 +12,7 @@ import ConfirmEmail from './pages/ConfirmEmail';
 import ListingEditor from './pages/ListingEditor';
 import { AccountLayout, AccountOverview, MyBooksPage, RequestsPage, TransactionsPage } from './pages/Account';
 import { WalletPage } from './pages/Wallet';
+import { InvitePage } from './pages/Invite';
 import { NotificationsPage } from './pages/Notifications';
 import { SettingsLayout, SettingsNotifications, SettingsProfile, SettingsSignIn } from './pages/Settings';
 import { NotificationTray } from './components/notification-tray';
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="handovers" element={<TransactionsPage />} />
           <Route path="transactions" element={<Navigate to="/account/handovers" replace />} />
           <Route path="wallet" element={<WalletPage />} />
+          <Route path="invite" element={<InvitePage />} />
           <Route path="notifications" element={<Navigate to="/notifications" replace />} />
           <Route path="settings" element={<Navigate to="/settings" replace />} />
         </Route>

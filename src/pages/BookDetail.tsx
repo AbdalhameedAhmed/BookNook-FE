@@ -14,7 +14,7 @@ import { Button, buttonClass } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 import { BookCover, StatusPill, TypeTag, coverSkeleton } from '../components/book';
-import { CostBreakdown, PromoCodeField, TopUpNotice, fill, useEgp } from '../components/deals';
+import { CostBreakdown, FreeRequestNote, PromoCodeField, TopUpNotice, fill, useEgp } from '../components/deals';
 import { ReportDialog } from '../components/report-dialog';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
@@ -76,6 +76,7 @@ export default function BookDetail() {
   const [myBooks, setMyBooks] = useState<Listing[] | null>(null);
   const [offered, setOffered] = useState<string[]>([]);
   const [promo, setPromo] = useState<PromoPreview | null>(null);
+  const [freeRequests, setFreeRequests] = useState(0);
 
   const load = useCallback(() => {
     let active = true;
@@ -107,6 +108,7 @@ export default function BookDetail() {
         if (!active) return;
         setFee(wallet.platform_fee_egp);
         setBalance(wallet.balance_egp);
+        setFreeRequests(wallet.free_requests_available ?? 0);
         setMyBooks(books ? books.filter((book) => book.status === 'active') : null);
       })
       .catch(() => { /* The request itself will report a problem; the breakdown is best effort. */ });
@@ -155,7 +157,9 @@ export default function BookDetail() {
 
   const isExchange = listing.listing_type === 'exchange';
   const salePrice = listing.listing_type === 'sale' ? listing.price_egp ?? 0 : 0;
-  const discount = promo && fee !== null ? Math.min(promo.discount_egp, fee) : 0;
+  // Without a promo code, a free request (earned by inviting a friend) waives the whole fee.
+  const freeRequest = !promo && fee !== null && fee > 0 && freeRequests > 0;
+  const discount = fee === null ? 0 : freeRequest ? fee : promo ? Math.min(promo.discount_egp, fee) : 0;
   const amountNeeded = fee === null ? null : needsWallet ? salePrice + fee - discount : 0;
   const walletReady = !needsWallet || (balance !== null && amountNeeded !== null && (!isExchange || myBooks !== null));
   const shortOfMoney = needsWallet && balance !== null && amountNeeded !== null && balance < amountNeeded;
@@ -374,14 +378,16 @@ export default function BookDetail() {
                 ) : null}
                 {needsWallet && fee !== null && balance !== null ? (
                   <div className="grid gap-2">
+                    {freeRequest ? <FreeRequestNote /> : null}
                     {fee > 0 ? <PromoCodeField id="request-promo" applied={promo} onChange={setPromo} /> : null}
                     <CostBreakdown
                       rows={[
                         ...(isExchange ? [] : [{ label: t('bookPrice'), amount: salePrice }]),
-                        ...(isExchange && !promo ? [] : [{ label: t('rfoofFee'), amount: fee }]),
+                        ...(isExchange && !promo && !freeRequest ? [] : [{ label: t('rfoofFee'), amount: fee }]),
                         ...(promo ? [{ label: fill(t('promoDiscount'), { code: promo.code }), amount: -discount }] : []),
+                        ...(freeRequest ? [{ label: t('freeRequestDiscount'), amount: -discount }] : []),
                       ]}
-                      total={{ label: isExchange && !promo ? t('rfoofFee') : t('totalHeld'), amount: amountNeeded ?? 0 }}
+                      total={{ label: isExchange && !promo && !freeRequest ? t('rfoofFee') : t('totalHeld'), amount: amountNeeded ?? 0 }}
                       balance={balance}
                     />
                     {shortOfMoney
