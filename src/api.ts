@@ -1,6 +1,6 @@
 import type {
   AdminOverview, AdminTopup, AuthUser, InviteSummary, PublicProfile, ChatMessage, Listing, ListingPayload, BookRequest, NotificationPage, PromoCode, PromoPreview,
-  SessionResponse, TopupStatus, Transaction, Wallet, WalletTopup,
+  SessionResponse, TopupStatus, Transaction, Wallet, WalletTopup, AdminWithdrawal, WalletWithdrawal, WithdrawalStatus,
 } from './types';
 import { ApiError, NetworkError, readDetail } from './errors';
 
@@ -146,6 +146,9 @@ export const api = {
     body.append('receipt', topup.receipt);
     return apiRequest<WalletTopup>('/api/v1/wallet/topups', token, { method: 'POST', body });
   },
+  /** Takes the amount from the balance now; an admin sends it to `recipientNumber` by hand. */
+  createWithdrawal: (token: string, withdrawal: { recipientNumber: string; amountEgp: number }) =>
+    apiRequest<WalletWithdrawal>('/api/v1/wallet/withdrawals', token, postJson({ recipient_number: withdrawal.recipientNumber, amount_egp: withdrawal.amountEgp })),
   notifications: {
     list: (token: string, before?: string, limit = 30) =>
       apiRequest<NotificationPage>(`/api/v1/me/notifications?limit=${limit}${before ? `&before=${encodeURIComponent(before)}` : ''}`, token),
@@ -168,6 +171,14 @@ export const api = {
     approveTopup: (token: string, id: string) => apiRequest<WalletTopup>(`/api/v1/admin/wallet-topups/${id}/approve`, token, { method: 'POST' }),
     rejectTopup: (token: string, id: string, note: string) =>
       apiRequest<WalletTopup>(`/api/v1/admin/wallet-topups/${id}/reject`, token, postJson({ note: note || null })),
+    withdrawals: async (token: string, status: WithdrawalStatus = 'pending') =>
+      (await apiRequest<{ items: AdminWithdrawal[] }>(`/api/v1/admin/wallet-withdrawals?status=${status}`, token)).items,
+    /** Only after the money was sent. `reference` is shown to the user. */
+    markWithdrawalPaid: (token: string, id: string, reference: string) =>
+      apiRequest<WalletWithdrawal>(`/api/v1/admin/wallet-withdrawals/${id}/paid`, token, postJson({ note: reference || null })),
+    /** Returns the amount to the user's wallet. */
+    rejectWithdrawal: (token: string, id: string, note: string) =>
+      apiRequest<WalletWithdrawal>(`/api/v1/admin/wallet-withdrawals/${id}/reject`, token, postJson({ note: note || null })),
     transactions: async (token: string) =>
       (await apiRequest<{ items: Transaction[] }>('/api/v1/admin/transactions?status=arranging', token)).items,
     cancelTransaction: (token: string, id: string) =>

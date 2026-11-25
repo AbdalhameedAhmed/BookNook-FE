@@ -34,6 +34,9 @@ export const notificationLinks: Record<NotificationKind, string> = {
   topup_approved: '/account/wallet',
   topup_rejected: '/account/wallet',
   topup_submitted: '/admin/topups',
+  withdrawal_requested: '/admin/withdrawals',
+  withdrawal_paid: '/account/wallet/withdraw',
+  withdrawal_rejected: '/account/wallet/withdraw',
   report_new: '/admin',
   referral_reward: '/account/invite',
 };
@@ -51,6 +54,9 @@ const looks: Record<NotificationKind, { icon: ReactNode; tone: string; text: Mes
   topup_approved: { icon: <Wallet size={20} />, tone: 'bg-glaze-soft text-glaze-deep', text: 'notifTopupApproved' },
   topup_rejected: { icon: <Wallet size={20} />, tone: 'bg-pom-soft text-pom', text: 'notifTopupRejected' },
   topup_submitted: { icon: <Wallet size={20} />, tone: 'bg-ochre-soft text-ochre-ink', text: 'notifTopupSubmitted' },
+  withdrawal_requested: { icon: <Wallet size={20} />, tone: 'bg-ochre-soft text-ochre-ink', text: 'notifWithdrawalRequested' },
+  withdrawal_paid: { icon: <Wallet size={20} />, tone: 'bg-glaze-soft text-glaze-deep', text: 'notifWithdrawalPaid' },
+  withdrawal_rejected: { icon: <Wallet size={20} />, tone: 'bg-pom-soft text-pom', text: 'notifWithdrawalRejected' },
   report_new: { icon: <Flag size={20} />, tone: 'bg-pom-soft text-pom', text: 'notifReportNew' },
   referral_reward: { icon: <Gift size={20} />, tone: 'bg-glaze-soft text-glaze-deep', text: 'notifReferralReward' },
 };
@@ -181,9 +187,9 @@ export function NotificationRow({ item, onOpen, compact = false }: { item: AppNo
   const text = fill(t(key), values);
   // A second line: what happened to the money, the chat preview, the report reason, or the moderator's note.
   const detail = item.kind === 'message' || item.kind === 'report_new' ? data.preview
-    : item.kind === 'topup_rejected' ? data.note
+    : item.kind === 'topup_rejected' || item.kind === 'withdrawal_rejected' || item.kind === 'withdrawal_paid' ? data.note
       : amount && item.kind === 'deal_completed' ? fill(t('notifPayout'), { amount })
-        : amount && !item.kind.startsWith('topup') ? fill(t('notifRefund'), { amount })
+        : amount && !item.kind.startsWith('topup') && !item.kind.startsWith('withdrawal') ? fill(t('notifRefund'), { amount })
           : undefined;
   const isUnread = !item.read_at;
 

@@ -30,6 +30,8 @@ const knownDetails: Record<string, MessageKey> = {
   'Enter a valid Egyptian mobile number, like 01012345678': 'fieldMobile',
   'You have too many top-ups waiting for review': 'errorTooManyTopups',
   'Only pending top-ups can be reviewed': 'errorTopupReviewed',
+  'You have too many withdrawals waiting to be paid': 'errorTooManyWithdrawals',
+  'Only pending withdrawals can be reviewed': 'errorWithdrawalReviewed',
   'Moderator access required': 'errorForbidden',
   'Insufficient wallet balance': 'errorInsufficient',
   'Choose at least one of your books to offer': 'offersRequired',

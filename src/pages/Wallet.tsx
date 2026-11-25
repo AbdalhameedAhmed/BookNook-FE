@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Copy, Hourglass, ImageUp, ReceiptText, RefreshCw, Smartphone, Wallet as WalletIcon } from 'lucide-react';
+import { Banknote, Copy, Hourglass, ImageUp, ReceiptText, RefreshCw, Smartphone, Wallet as WalletIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { fill } from '../components/deals';
 import { api } from '../api';
 import { useAuth } from '../auth';
@@ -9,7 +10,7 @@ import { useLanguage } from '../i18n';
 import type { Language, MessageKey } from '../i18n';
 import type { Wallet, WalletEntry } from '../types';
 import { Alert, FieldError } from '../components/ui/alert';
-import { Button } from '../components/ui/button';
+import { Button, buttonClass } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
 import { useToast } from '../components/ui/toast';
 import { StatusPill } from '../components/book';
@@ -24,8 +25,11 @@ const MAX_TOPUP = 50_000;
 type Field = 'sender' | 'amount' | 'receipt';
 
 const entryLabels: Record<WalletEntry['kind'], MessageKey> = {
-  topup: 'entryTopup', hold: 'entryHold', refund: 'entryRefund', payout: 'entryPayout', fee: 'entryFee',
+  topup: 'entryTopup', hold: 'entryHold', refund: 'entryRefund', payout: 'entryPayout', fee: 'entryFee', withdrawal: 'entryWithdrawal',
 };
+
+const entryLabel = (entry: WalletEntry): MessageKey =>
+  entry.kind === 'refund' && entry.withdrawal_id ? 'entryWithdrawalReturned' : entryLabels[entry.kind];
 
 /** Mirrors the backend: accepts spaces/dashes and a +20 / 0020 prefix, returns 01XXXXXXXXX or null. */
 export function normalizeEgyptMobile(value: string): string | null {
@@ -88,6 +92,9 @@ export function WalletPage() {
             </div>
             <p className="relative mt-3 font-book text-display-lg-mobile font-bold text-glaze-deep md:text-display-lg ar:font-ui ar:leading-[1.7] ar:tracking-normal">{formatEgp(wallet.balance_egp, language, t)}</p>
             <p className="relative mt-1 text-body-sm text-ink-3 ar:mt-3">{t('walletBalanceNote')}</p>
+            <Link to="/account/wallet/withdraw" className={cn(buttonClass({ variant: 'secondary', size: 'sm' }), 'relative mt-4')} data-tour="wallet-withdraw">
+              <Banknote size={16} aria-hidden="true" />{t('withdraw')}
+            </Link>
             {pendingTopups > 0 ? (
               <p className="relative mt-3 flex items-center gap-2 rounded-lg bg-ochre-soft px-3 py-2 text-body-sm text-ink" role="status">
                 <Hourglass size={16} className="flex-none text-ochre-ink" aria-hidden="true" />
@@ -115,7 +122,7 @@ export function WalletPage() {
             {wallet.entries.map((entry) => (
               <li key={entry.id} className="flex items-center justify-between gap-3 py-3">
                 <span className="grid min-w-0">
-                  <span className="text-label-lg font-semibold text-ink">{t(entryLabels[entry.kind])}</span>
+                  <span className="text-label-lg font-semibold text-ink">{t(entryLabel(entry))}</span>
                   {entry.listing_title ? <span className="truncate text-body-sm text-ink-2">{entry.listing_title}</span> : null}
                   <span className="text-body-sm text-ink-3">{formatDateTime(entry.created_at, language)}</span>
                 </span>

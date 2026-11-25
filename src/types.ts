@@ -88,7 +88,9 @@ export type ChatMessage = {
 export type WalletEntry = {
   id: string;
   amount_egp: number;
-  kind: 'topup' | 'hold' | 'refund' | 'payout' | 'fee';
+  kind: 'topup' | 'hold' | 'refund' | 'payout' | 'fee' | 'withdrawal';
+  /** Set on a withdrawal and on its refund when a moderator rejects it. */
+  withdrawal_id?: string | null;
   created_at: string;
   /** The book a hold, refund, or payout relates to. */
   listing_title?: string | null;
@@ -150,6 +152,29 @@ export type Wallet = {
   free_requests_available: number;
   options: ChargingOption[];
   topups: WalletTopup[];
+  withdrawals: WalletWithdrawal[];
+};
+
+export type WithdrawalStatus = 'pending' | 'paid' | 'rejected';
+
+/** A request to send wallet money to the user's e-wallet. The amount leaves the balance when requested. */
+export type WalletWithdrawal = {
+  id: string;
+  method: 'e_wallet';
+  recipient_number: string;
+  amount_egp: number;
+  status: WithdrawalStatus;
+  /** Transfer reference when paid, reason when rejected. */
+  review_note: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+};
+
+export type AdminWithdrawal = WalletWithdrawal & {
+  user_id: string;
+  user_email: string | null;
+  /** Numbers the user has topped up from. A payout to a different number deserves a closer look. */
+  topup_numbers: string[];
 };
 
 /** A top-up as moderators see it: includes who sent it and a short-lived receipt link. */
@@ -169,6 +194,9 @@ export type AdminOverview = {
   reports_open: number;
   topups_pending: number;
   topups_pending_egp: number;
+  withdrawals_pending: number;
+  withdrawals_pending_egp: number;
+  withdrawals_paid_egp: number;
   wallet_balance_total_egp: number;
   held_total_egp: number;
   platform_revenue_egp: number;
@@ -193,10 +221,11 @@ export type NotificationKind =
   | 'request_new' | 'request_accepted' | 'request_rejected' | 'request_unavailable' | 'request_cancelled'
   | 'deal_confirmed_by_other' | 'deal_completed' | 'deal_cancelled' | 'message'
   | 'topup_approved' | 'topup_rejected'
+  | 'withdrawal_paid' | 'withdrawal_rejected'
   /** A friend who joined from the user's invite link completed a deal. */
   | 'referral_reward'
   /** Moderators only. */
-  | 'topup_submitted' | 'report_new';
+  | 'topup_submitted' | 'withdrawal_requested' | 'report_new';
 
 /** An in-app notification. `data` is plain display text from the server; never render it as HTML. */
 export type AppNotification = {

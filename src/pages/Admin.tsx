@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  BookOpen, ChevronRight, Coins, ExternalLink, Flag, Handshake, Hourglass, Inbox, LayoutDashboard, ReceiptText, Repeat, ShieldCheck, TicketPercent, Users, Wallet,
+  AlertTriangle, Banknote, BookOpen, ChevronRight, Coins, Copy, ExternalLink, Flag, Handshake, Hourglass, Inbox, LayoutDashboard, ReceiptText, Repeat, ShieldCheck, TicketPercent, Users, Wallet,
 } from 'lucide-react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { describeError } from '../errors';
 import { useLanguage } from '../i18n';
-import type { AdminOverview, AdminTopup, PromoCode, Transaction } from '../types';
+import type { AdminOverview, AdminTopup, AdminWithdrawal, PromoCode, Transaction } from '../types';
 import type { MessageKey } from '../i18n';
 import { FieldError } from '../components/ui/alert';
 import { fill } from '../components/deals';
@@ -37,6 +37,7 @@ export function AdminLayout() {
   const tabs = [
     { to: '/admin', label: t('adminOverviewTab'), icon: LayoutDashboard, end: true },
     { to: '/admin/topups', label: t('adminPendingTab'), icon: ReceiptText },
+    { to: '/admin/withdrawals', label: t('adminWithdrawalsTab'), icon: Banknote },
     { to: '/admin/handovers', label: t('adminHandoversTab'), icon: Handshake },
     { to: '/admin/promos', label: t('adminPromosTab'), icon: TicketPercent },
   ];
@@ -97,6 +98,8 @@ export function AdminOverviewPage() {
     { label: t('statCompleted'), value: String(o.transactions_completed), icon: <ShieldCheck size={20} />, tone: 'bg-cobalt-soft text-cobalt' },
     { label: t('statOpenReports'), value: String(o.reports_open), icon: <Flag size={20} />, tone: 'bg-pom-soft text-pom' },
     { label: t('statPendingTopups'), value: String(o.topups_pending), note: `${formatEgp(o.topups_pending_egp, language, t)}`, icon: <ReceiptText size={20} />, tone: 'bg-ochre-soft text-ochre-ink' },
+    { label: t('statPendingWithdrawals'), value: String(o.withdrawals_pending), note: `${formatEgp(o.withdrawals_pending_egp, language, t)}`, icon: <Banknote size={20} />, tone: 'bg-ochre-soft text-ochre-ink' },
+    { label: t('statWithdrawnTotal'), value: formatEgp(o.withdrawals_paid_egp, language, t), icon: <Banknote size={20} />, tone: 'bg-cobalt-soft text-cobalt' },
     { label: t('statWalletTotal'), value: formatEgp(o.wallet_balance_total_egp, language, t), icon: <Wallet size={20} />, tone: 'bg-glaze-fixed text-glaze-deep' },
     { label: t('statHeld'), value: formatEgp(o.held_total_egp, language, t), icon: <Hourglass size={20} />, tone: 'bg-ochre-soft text-ochre-ink' },
     { label: t('statRevenue'), value: formatEgp(o.platform_revenue_egp, language, t), icon: <Coins size={20} />, tone: 'bg-glaze-fixed text-glaze-deep' },
@@ -113,7 +116,7 @@ export function AdminOverviewPage() {
             <span className="font-book text-headline-md font-bold text-ink">{tile.value}</span>
             {tile.note ? <span className="text-label-sm text-ink-3">{tile.note}</span> : null}
           </li>
-        )) : Array.from({ length: 10 }, (_, index) => <li key={index} className={cn(ui.skeleton, 'h-36 rounded-card')} />)}
+        )) : Array.from({ length: 12 }, (_, index) => <li key={index} className={cn(ui.skeleton, 'h-36 rounded-card')} />)}
       </ul>
       {o && o.topups_pending > 0 ? (
         <Link to="/admin/topups" className={cn(ui.card, 'group flex items-center justify-between gap-3 p-4 md:p-5')}>
@@ -122,6 +125,15 @@ export function AdminOverviewPage() {
             <span className="text-label-lg font-semibold text-ink">{o.topups_pending} {t('statPendingTopups')}</span>
           </span>
           <span className="inline-flex items-center gap-1 text-label-md font-semibold text-glaze-deep group-hover:underline">{t('reviewTopups')}<ChevronRight size={16} className={ui.flipRtl} aria-hidden="true" /></span>
+        </Link>
+      ) : null}
+      {o && o.withdrawals_pending > 0 ? (
+        <Link to="/admin/withdrawals" className={cn(ui.card, 'group flex items-center justify-between gap-3 p-4 md:p-5')}>
+          <span className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-ochre-soft text-ochre-ink" aria-hidden="true"><Banknote size={20} /></span>
+            <span className="text-label-lg font-semibold text-ink">{o.withdrawals_pending} {t('statPendingWithdrawals')} · {formatEgp(o.withdrawals_pending_egp, language, t)}</span>
+          </span>
+          <span className="inline-flex items-center gap-1 text-label-md font-semibold text-glaze-deep group-hover:underline">{t('reviewWithdrawals')}<ChevronRight size={16} className={ui.flipRtl} aria-hidden="true" /></span>
         </Link>
       ) : null}
     </div>
@@ -247,6 +259,143 @@ export function AdminTopupsPage() {
         <label className={ui.field} htmlFor="reject-note">
           <span className={ui.label}>{t('rejectNoteLabel')} <span className={ui.optional}>({t('optional')})</span></span>
           <textarea id="reject-note" className={cn(ui.control, ui.textarea)} maxLength={500} rows={3} value={note} placeholder={t('rejectNotePlaceholder')} onChange={(event) => setNote(event.target.value)} />
+        </label>
+      </Dialog>
+    </section>
+  );
+}
+
+/** Withdrawal requests: send the money outside the app, then mark the request paid (or reject to refund). */
+export function AdminWithdrawalsPage() {
+  const { session } = useAuth();
+  const { t, language } = useLanguage();
+  const toast = useToast();
+  const [items, setItems] = useState<AdminWithdrawal[] | null>(null);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState<{ item: AdminWithdrawal; action: 'paid' | 'reject' } | null>(null);
+  const [note, setNote] = useState('');
+
+  const load = useCallback(() => {
+    let active = true;
+    const token = session?.access_token;
+    if (!token) return () => { active = false; };
+    setError('');
+    api.admin.withdrawals(token, 'pending')
+      .then((next) => { if (active) setItems(next); })
+      .catch((reason) => { if (active) setError(describeError(reason, t, 'adminLoadError')); });
+    return () => { active = false; };
+  }, [session?.access_token, t]);
+
+  useEffect(() => load(), [load]);
+
+  const copy = async (value: string, message: MessageKey) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(t(message));
+    } catch {
+      /* Clipboard can be blocked; the value stays visible and selectable. */
+    }
+  };
+
+  const close = () => { setReviewing(null); setNote(''); };
+  const submit = async () => {
+    if (!reviewing || !session) return;
+    const { item, action } = reviewing;
+    const text = note.trim();
+    close();
+    setBusyId(item.id);
+    try {
+      if (action === 'paid') await api.admin.markWithdrawalPaid(session.access_token, item.id, text);
+      else await api.admin.rejectWithdrawal(session.access_token, item.id, text);
+      toast.success(t(action === 'paid' ? 'withdrawalPaid' : 'withdrawalRejected'));
+      setItems((current) => current?.filter((entry) => entry.id !== item.id) ?? null);
+    } catch (reason) {
+      toast.error(t('withdrawalReviewFailed'), describeError(reason, t, 'withdrawalReviewFailed'));
+      load();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  if (error) return <Alert title={t('adminLoadError')} onRetry={load} retryLabel={t('tryAgain')}>{error}</Alert>;
+  if (!items) return <div className="grid gap-3" aria-busy="true">{[0, 1].map((key) => <span key={key} className={cn(ui.skeleton, 'h-36 rounded-card')} />)}</div>;
+
+  const total = items.reduce((sum, item) => sum + item.amount_egp, 0);
+  const paying = reviewing?.action === 'paid';
+
+  return (
+    <section aria-labelledby="admin-withdrawals-heading">
+      <div className="mb-4">
+        <h2 id="admin-withdrawals-heading" className="font-book text-headline-sm font-semibold text-ink ar:leading-[1.5]">
+          {t('adminWithdrawalsTab')}{items.length ? <span className="text-ink-3"> · {formatEgp(total, language, t)}</span> : null}
+        </h2>
+        <p className={cn('text-body-sm text-ink-2', ui.measure)}>{t('adminWithdrawalsCopy')}</p>
+      </div>
+      {items.length === 0 ? (
+        <EmptyState icon={<Banknote size={26} />} title={t('noPendingWithdrawals')} description={t('noPendingWithdrawalsCopy')} />
+      ) : (
+        <ul className="grid gap-4">
+          {items.map((item) => (
+            <li key={item.id} className={cn(ui.card, 'grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center md:p-5')}>
+              <div className="grid min-w-0 gap-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="font-book text-headline-md font-bold text-glaze-deep ar:font-ui ar:leading-[1.5]">{formatEgp(item.amount_egp, language, t)}</span>
+                  <span className="text-body-sm text-ink-3">{t('submittedOn')} {formatDateTime(item.created_at, language)}</span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-sunk p-3">
+                  <span className="grid">
+                    <span className="text-label-md font-semibold text-ink-2">{t('sendTo')} · {t('optionEwallet')}</span>
+                    <bdi dir="ltr" className="select-all font-book text-headline-sm font-bold tabular-nums tracking-wide text-ink">{item.recipient_number}</bdi>
+                  </span>
+                  <span className="flex flex-wrap gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => void copy(item.recipient_number, 'numberCopied')}><Copy size={15} aria-hidden="true" />{t('copyNumber')}</Button>
+                    <Button variant="secondary" size="sm" onClick={() => void copy(String(item.amount_egp), 'amountCopied')}><Copy size={15} aria-hidden="true" />{t('copyAmount')}</Button>
+                  </span>
+                </div>
+                <dl className="grid gap-1.5 text-body-md sm:grid-cols-[auto_1fr] sm:gap-x-4">
+                  <dt className="font-semibold text-ink-2">{t('email')}</dt>
+                  <dd className="min-w-0 truncate text-ink">{item.user_email ?? item.user_id}</dd>
+                  <dt className="font-semibold text-ink-2">{t('toppedUpFrom')}</dt>
+                  <dd className="text-ink">
+                    {item.topup_numbers.length
+                      ? item.topup_numbers.map((value, index) => <span key={value}>{index ? ', ' : ''}<bdi dir="ltr" className="tabular-nums">{value}</bdi></span>)
+                      : <span className="text-ink-3">{t('noTopupNumbers')}</span>}
+                  </dd>
+                </dl>
+                {!item.topup_numbers.includes(item.recipient_number) ? (
+                  <p className="flex items-start gap-2 rounded-lg bg-ochre-soft px-3 py-2 text-body-sm text-ink" role="note">
+                    <AlertTriangle size={16} className="mt-0.5 flex-none text-ochre-ink" aria-hidden="true" />{t('newNumberWarning')}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-2 md:flex-col">
+                <Button size="sm" loading={busyId === item.id} disabled={busyId !== null} onClick={() => setReviewing({ item, action: 'paid' })}>{t('markPaid')}</Button>
+                <Button size="sm" variant="danger-quiet" disabled={busyId !== null} onClick={() => setReviewing({ item, action: 'reject' })}>{t('reject')}</Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Dialog
+        open={reviewing !== null}
+        onClose={close}
+        title={t(paying ? 'markPaidTitle' : 'rejectWithdrawalTitle')}
+        description={reviewing ? `${formatEgp(reviewing.item.amount_egp, language, t)} → ${reviewing.item.recipient_number} — ${t(paying ? 'markPaidCopy' : 'rejectWithdrawalCopy')}` : undefined}
+        tone={paying ? undefined : 'danger'}
+        closeLabel={t('dismiss')}
+        footer={(
+          <>
+            <Button variant="secondary" className="border-transparent bg-sunk-2" onClick={close}>{t('cancel')}</Button>
+            <Button variant={paying ? 'primary' : 'danger'} onClick={() => void submit()}>{t(paying ? 'markPaid' : 'reject')}</Button>
+          </>
+        )}
+      >
+        <label className={ui.field} htmlFor="withdrawal-note">
+          <span className={ui.label}>{t(paying ? 'referenceLabel' : 'rejectNoteLabel')} <span className={ui.optional}>({t('optional')})</span></span>
+          <textarea id="withdrawal-note" className={cn(ui.control, ui.textarea)} maxLength={500} rows={2} value={note}
+            placeholder={t(paying ? 'referencePlaceholder' : 'rejectWithdrawalPlaceholder')} onChange={(event) => setNote(event.target.value)} />
         </label>
       </Dialog>
     </section>

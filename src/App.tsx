@@ -12,6 +12,7 @@ import ConfirmEmail from './pages/ConfirmEmail';
 import ListingEditor from './pages/ListingEditor';
 import { AccountLayout, AccountOverview, MyBooksPage, RequestsPage, TransactionsPage } from './pages/Account';
 import { WalletPage } from './pages/Wallet';
+import { WithdrawPage } from './pages/Withdraw';
 import { InvitePage } from './pages/Invite';
 import { NotificationsPage } from './pages/Notifications';
 import { SettingsLayout, SettingsNotifications, SettingsProfile, SettingsSignIn } from './pages/Settings';
@@ -19,7 +20,7 @@ import { NotificationTray } from './components/notification-tray';
 import { UserMenu } from './components/user-menu';
 import HelpCenter from './pages/Help';
 import SellerProfile from './pages/SellerProfile';
-import { AdminHandoversPage, AdminLayout, AdminOverviewPage, AdminPromosPage, AdminTopupsPage } from './pages/Admin';
+import { AdminHandoversPage, AdminLayout, AdminOverviewPage, AdminPromosPage, AdminTopupsPage, AdminWithdrawalsPage } from './pages/Admin';
 import { useLanguage } from './i18n';
 import { useTheme } from './theme';
 import { buttonClass } from './components/ui/button';
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="handovers" element={<TransactionsPage />} />
           <Route path="transactions" element={<Navigate to="/account/handovers" replace />} />
           <Route path="wallet" element={<WalletPage />} />
+          <Route path="wallet/withdraw" element={<WithdrawPage />} />
           <Route path="invite" element={<InvitePage />} />
           <Route path="notifications" element={<Navigate to="/notifications" replace />} />
           <Route path="settings" element={<Navigate to="/settings" replace />} />
@@ -61,6 +63,7 @@ export default function App() {
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route index element={<AdminOverviewPage />} />
           <Route path="topups" element={<AdminTopupsPage />} />
+          <Route path="withdrawals" element={<AdminWithdrawalsPage />} />
           <Route path="handovers" element={<AdminHandoversPage />} />
           <Route path="promos" element={<AdminPromosPage />} />
         </Route>
