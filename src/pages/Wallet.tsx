@@ -18,7 +18,7 @@ import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
 const allowedReceiptTypes = ['image/jpeg', 'image/png', 'image/webp'];
-const maxReceiptBytes = 5 * 1024 * 1024;
+const maxReceiptBytes = 20 * 1024 * 1024;
 const MIN_TOPUP = 1;
 const MAX_TOPUP = 50_000;
 

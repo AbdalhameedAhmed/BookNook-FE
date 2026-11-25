@@ -17,7 +17,7 @@ import { fill } from '../components/deals';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
-const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const settingsTabs = [

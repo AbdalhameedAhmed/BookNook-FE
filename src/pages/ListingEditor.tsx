@@ -16,7 +16,7 @@ import { BookCard } from '../components/book';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
-const maxImageBytes = 2 * 1024 * 1024;
+const maxImageBytes = 20 * 1024 * 1024;
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const conditions = ['like_new', 'good', 'acceptable', 'heavily_used'];
 const meetups: Array<{ value: string; label: MessageKey }> = [
