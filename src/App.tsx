@@ -19,6 +19,7 @@ import { SettingsLayout, SettingsNotifications, SettingsProfile, SettingsSignIn 
 import { NotificationTray } from './components/notification-tray';
 import { UserMenu } from './components/user-menu';
 import HelpCenter from './pages/Help';
+import ContactPage from './pages/Contact';
 import SellerProfile from './pages/SellerProfile';
 import { AdminHandoversPage, AdminLayout, AdminOverviewPage, AdminPromosPage, AdminTopupsPage, AdminWithdrawalsPage } from './pages/Admin';
 import { useLanguage } from './i18n';
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="settings" element={<Navigate to="/settings" replace />} />
         </Route>
         <Route path="/help" element={<HelpCenter />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/users/:userId" element={<SellerProfile />} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
@@ -167,6 +169,7 @@ function SiteLayout() {
             <p>© {new Date().getFullYear()} {t('brandName')}. {t('detailSafety')}</p>
             <p className="flex flex-wrap gap-x-4 gap-y-1">
               <Link to="/help" className="font-semibold text-ink-2 underline-offset-[3px] hover:text-glaze-deep hover:underline">{t('navHelp')}</Link>
+              <Link to="/contact" className="font-semibold text-ink-2 underline-offset-[3px] hover:text-glaze-deep hover:underline">{t('navContact')}</Link>
               <span>{t('footerTagline')}</span>
             </p>
           </div>

@@ -105,6 +105,9 @@ export function WithdrawPage() {
                 </li>
               ))}
             </ol>
+            <p className="mt-4 text-body-sm text-ink-3">
+              <Link to="/contact" className={ui.textLink}>{t('navContact')}</Link>
+            </p>
           </section>
         </div>
 

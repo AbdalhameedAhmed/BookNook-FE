@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { LifeBuoy, LogOut, Settings, UserRound } from 'lucide-react';
+import { Headset, LifeBuoy, LogOut, Settings, UserRound } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { useLanguage } from '../i18n';
@@ -67,6 +67,7 @@ export function UserMenu() {
             <Link to="/account" className={menuItem}><UserRound size={18} className="text-ink-2" aria-hidden="true" />{t('menuMyAccount')}</Link>
             <Link to="/settings" className={menuItem}><Settings size={18} className="text-ink-2" aria-hidden="true" />{t('navSettings')}</Link>
             <Link to="/help" className={menuItem}><LifeBuoy size={18} className="text-ink-2" aria-hidden="true" />{t('navHelp')}</Link>
+            <Link to="/contact" className={menuItem}><Headset size={18} className="text-ink-2" aria-hidden="true" />{t('navContact')}</Link>
             <button type="button" className={cn(menuItem, 'hover:text-pom')} onClick={() => { close(); void signOut(); }}>
               <LogOut size={18} className="text-ink-2 rtl:-scale-x-100" aria-hidden="true" />{t('signOut')}
             </button>

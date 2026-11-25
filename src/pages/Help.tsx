@@ -1,4 +1,4 @@
-import { Check, LifeBuoy, LogIn, Play, RotateCcw } from 'lucide-react';
+import { Check, ChevronRight, Headset, LifeBuoy, LogIn, Play, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { useLanguage } from '../i18n';
@@ -65,6 +65,17 @@ export default function HelpCenter() {
           })}
         </ul>
       </section>
+
+      <Link to="/contact" className={cn(ui.card, 'group mt-8 flex items-center justify-between gap-3 p-4 sm:p-5')}>
+        <span className="flex items-center gap-3">
+          <span className="grid h-12 w-12 flex-none place-items-center rounded-xl bg-glaze-soft text-glaze-deep" aria-hidden="true"><Headset size={22} /></span>
+          <span className="grid">
+            <span className="text-title-md font-bold text-ink">{t('contactTitle')}</span>
+            <span className="text-body-sm text-ink-2">{t('contactIntro')}</span>
+          </span>
+        </span>
+        <ChevronRight size={18} className={cn('flex-none text-glaze-deep', ui.flipRtl)} aria-hidden="true" />
+      </Link>
     </div>
   );
 }
