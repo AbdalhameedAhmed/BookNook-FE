@@ -68,6 +68,19 @@ export function TopUpNotice({ title, children }: { title: string; children: stri
 const POLL_MS = 5000;
 
 /**
+ * Adds messages not already shown (matched by id), oldest first. A poll and a send can
+ * finish in either order, so neither may duplicate nor drop the other's messages.
+ * Returns `current` unchanged when nothing is new, to avoid needless re-renders.
+ */
+export function mergeMessages(current: ChatMessage[] | null, incoming: ChatMessage[]): ChatMessage[] {
+  if (!current) return incoming;
+  const known = new Set(current.map((message) => message.id));
+  const added = incoming.filter((message) => !known.has(message.id));
+  if (!added.length) return current;
+  return [...current, ...added].sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+/**
  * Message thread for one handover. Polls while open (no websockets in the MVP).
  * `canSend` is false once the handover is closed; the thread stays readable.
  */
@@ -78,6 +91,7 @@ export function ChatThread({ transactionId, otherName, canSend }: { transactionI
   const [error, setError] = useState('');
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const listRef = useRef<HTMLOListElement>(null);
   const token = session?.access_token;
   const { markRead } = useActivity();
@@ -86,7 +100,7 @@ export function ChatThread({ transactionId, otherName, canSend }: { transactionI
     if (!token) return;
     try {
       const next = await api.messages(token, transactionId);
-      setMessages((current) => (current && current.length === next.length ? current : next));
+      setMessages((current) => mergeMessages(current, next));
       setError('');
     } catch (reason) {
       setError(describeError(reason, t, 'chatLoadError'));
@@ -111,16 +125,19 @@ export function ChatThread({ transactionId, otherName, canSend }: { transactionI
   const send = async (event: FormEvent) => {
     event.preventDefault();
     const body = draft.trim();
-    if (!token || !body) return;
+    // Enter calls requestSubmit(), which ignores the disabled button, so guard repeat presses here.
+    if (!token || !body || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     try {
       const message = await api.sendMessage(token, transactionId, body);
-      setMessages((current) => [...(current ?? []), message]);
+      setMessages((current) => mergeMessages(current, [message]));
       setDraft('');
       setError('');
     } catch (reason) {
       setError(describeError(reason, t, 'chatSendFailed'));
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
