@@ -326,7 +326,7 @@ export function AdminHandoversPage() {
   );
 }
 
-type PromoField = 'code' | 'discount' | 'maxUses';
+type PromoField = 'code' | 'discount' | 'maxUses' | 'perUser';
 
 export function AdminPromosPage() {
   const { session } = useAuth();
@@ -338,6 +338,7 @@ export function AdminPromosPage() {
   const [code, setCode] = useState('');
   const [discount, setDiscount] = useState('');
   const [maxUses, setMaxUses] = useState('');
+  const [perUser, setPerUser] = useState('');
   const [errors, setErrors] = useState<Partial<Record<PromoField, MessageKey>>>({});
   const [creating, setCreating] = useState(false);
 
@@ -362,15 +363,17 @@ export function AdminPromosPage() {
     if (!/^[A-Za-z0-9_-]{3,32}$/.test(code.trim())) next.code = 'fieldPromoCode';
     if (!Number.isInteger(discountEgp) || discountEgp < 1 || discountEgp > 10000) next.discount = 'fieldPromoDiscount';
     if (!Number.isInteger(uses) || uses < 1) next.maxUses = 'fieldPromoMaxUses';
+    const perUserLimit = perUser.trim() === '' ? null : Number(perUser);
+    if (perUserLimit !== null && (!Number.isInteger(perUserLimit) || perUserLimit < 1 || perUserLimit > 1000)) next.perUser = 'fieldPromoPerUser';
     setErrors(next);
-    const firstInvalid = (['code', 'discount', 'maxUses'] as PromoField[]).find((field) => next[field]);
+    const firstInvalid = (['code', 'discount', 'maxUses', 'perUser'] as PromoField[]).find((field) => next[field]);
     if (firstInvalid) { document.getElementById(`promo-${firstInvalid}`)?.focus(); return; }
     if (!session) return;
     setCreating(true);
     try {
-      const created = await api.admin.createPromo(session.access_token, { code: code.trim(), discountEgp, maxUses: uses });
+      const created = await api.admin.createPromo(session.access_token, { code: code.trim(), discountEgp, maxUses: uses, maxUsesPerUser: perUserLimit });
       setItems((current) => [created, ...(current ?? [])]);
-      setCode(''); setDiscount(''); setMaxUses('');
+      setCode(''); setDiscount(''); setMaxUses(''); setPerUser('');
       toast.success(t('promoCreated'));
     } catch (reason) {
       toast.error(t('promoCreateFailed'), describeError(reason, t, 'promoCreateFailed'));
@@ -407,7 +410,7 @@ export function AdminPromosPage() {
 
       <form className={cn(ui.card, 'grid gap-4 p-4 md:p-5')} onSubmit={(event) => void create(event)} noValidate aria-labelledby="new-promo-heading">
         <h3 id="new-promo-heading" className="text-title-md font-semibold text-ink">{t('newPromo')}</h3>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className={ui.field} htmlFor="promo-code">
             <span className={ui.label}>{t('promoCodeLabel')}</span>
             <input id="promo-code" className={cn(ui.control, 'uppercase')} dir="ltr" maxLength={32} autoComplete="off" value={code}
@@ -429,6 +432,12 @@ export function AdminPromosPage() {
               onChange={(event) => { setMaxUses(event.target.value); setErrors((e) => ({ ...e, maxUses: undefined })); }} {...invalid('maxUses')} />
             {errors.maxUses ? <FieldError id="promo-maxUses-error">{t(errors.maxUses)}</FieldError> : <span className={ui.hint}>{t('promoMaxUsesHint')}</span>}
           </label>
+          <label className={ui.field} htmlFor="promo-perUser">
+            <span className={ui.label}>{t('promoPerUserLabel')}</span>
+            <input id="promo-perUser" className={ui.control} type="number" inputMode="numeric" min={1} max={1000} step={1} value={perUser}
+              onChange={(event) => { setPerUser(event.target.value); setErrors((e) => ({ ...e, perUser: undefined })); }} {...invalid('perUser')} />
+            {errors.perUser ? <FieldError id="promo-perUser-error">{t(errors.perUser)}</FieldError> : <span className={ui.hint}>{t('promoPerUserHint')}</span>}
+          </label>
         </div>
         <Button type="submit" className="justify-self-start" loading={creating}>{t('createPromo')}</Button>
       </form>
@@ -448,7 +457,8 @@ export function AdminPromosPage() {
                   </span>
                 </span>
                 <span className="text-body-sm text-ink-2">
-                  {fill(t('promoUsage'), { used: promo.uses_count, max: promo.max_uses })} · {fill(t('promoGiven'), { amount: formatEgp(promo.discount_given_egp, language, t) })}
+                  {fill(t('promoUsage'), { used: promo.uses_count, max: promo.max_uses })}
+                  {promo.max_uses_per_user ? ` · ${fill(t('promoPerUser'), { count: promo.max_uses_per_user })}` : ''} · {fill(t('promoGiven'), { amount: formatEgp(promo.discount_given_egp, language, t) })}
                 </span>
                 <span className="h-1.5 w-48 max-w-full overflow-hidden rounded-full bg-sunk-2" aria-hidden="true">
                   <span className="block h-full bg-glaze" style={{ width: `${Math.min(100, (promo.uses_count / promo.max_uses) * 100)}%` }} />

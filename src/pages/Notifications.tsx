@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Ban, Bell, CheckCheck, CheckCircle2, Flag, Gift, Handshake, Inbox, MessageCircle, Settings, Undo2, Wallet, XCircle } from 'lucide-react';
+import { Ban, Bell, BookPlus, CheckCheck, CheckCircle2, Flag, Gift, Handshake, Inbox, MessageCircle, Settings, Undo2, Wallet, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
@@ -36,7 +36,14 @@ export const notificationLinks: Record<NotificationKind, string> = {
   topup_submitted: '/admin/topups',
   report_new: '/admin',
   referral_reward: '/account/invite',
+  listing_new: '/',
 };
+
+/** Where tapping this notification goes: one new book opens its page; several open the catalogue. */
+export function notificationLink(item: AppNotification) {
+  if (item.kind === 'listing_new' && item.count === 1 && item.listing_id) return `/books/${encodeURIComponent(item.listing_id)}`;
+  return notificationLinks[item.kind] ?? '/account';
+}
 
 const looks: Record<NotificationKind, { icon: ReactNode; tone: string; text: MessageKey }> = {
   request_new: { icon: <Inbox size={20} />, tone: 'bg-glaze-soft text-glaze-deep', text: 'notifRequestNew' },
@@ -53,6 +60,7 @@ const looks: Record<NotificationKind, { icon: ReactNode; tone: string; text: Mes
   topup_submitted: { icon: <Wallet size={20} />, tone: 'bg-ochre-soft text-ochre-ink', text: 'notifTopupSubmitted' },
   report_new: { icon: <Flag size={20} />, tone: 'bg-pom-soft text-pom', text: 'notifReportNew' },
   referral_reward: { icon: <Gift size={20} />, tone: 'bg-glaze-soft text-glaze-deep', text: 'notifReferralReward' },
+  listing_new: { icon: <BookPlus size={20} />, tone: 'bg-cobalt-soft text-cobalt-ink', text: 'notifListingNew' },
 };
 
 export function NotificationsPage() {
@@ -112,7 +120,7 @@ export function NotificationsPage() {
 
   const open = (item: AppNotification) => {
     if (!item.read_at) void markRead([item.id]).catch(() => undefined);
-    navigate(notificationLinks[item.kind] ?? '/account');
+    navigate(notificationLink(item));
   };
 
   const markAll = async () => {
@@ -177,6 +185,7 @@ export function NotificationRow({ item, onOpen, compact = false }: { item: AppNo
     count: item.count,
   };
   const key: MessageKey = item.kind === 'message' && item.count > 1 ? 'notifMessages'
+    : item.kind === 'listing_new' && item.count > 1 ? 'notifListingsNew'
     : item.kind === 'report_new' && !data.listing_title ? 'notifReportUser' : look.text;
   const text = fill(t(key), values);
   // A second line: what happened to the money, the chat preview, the report reason, or the moderator's note.

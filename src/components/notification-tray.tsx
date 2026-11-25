@@ -9,7 +9,7 @@ import { useLanguage } from '../i18n';
 import { enablePush, getPushState } from '../push';
 import type { PushState } from '../push';
 import type { AppNotification } from '../types';
-import { ListSkeleton, NotificationRow, notificationLinks } from '../pages/Notifications';
+import { ListSkeleton, NotificationRow, notificationLink } from '../pages/Notifications';
 import { fill } from './deals';
 import { popoverPanel, usePopover } from './popover';
 import { useToast } from './ui/toast';
@@ -92,7 +92,7 @@ function TrayContent() {
 
   const open = (item: AppNotification) => {
     if (!item.read_at) void markRead([item.id]).catch(() => undefined);
-    navigate(notificationLinks[item.kind] ?? '/account');
+    navigate(notificationLink(item));
   };
 
   const markAll = async () => {

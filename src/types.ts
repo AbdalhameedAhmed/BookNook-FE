@@ -175,7 +175,7 @@ export type AdminOverview = {
 };
 
 /** Result of checking a promo code before using it. */
-export type PromoPreview = { code: string; discount_egp: number };
+export type PromoPreview = { code: string; discount_egp: number; /** Null when the code has no per-person limit. */ uses_left_for_you?: number | null };
 
 export type PromoCode = {
   id: string;
@@ -183,6 +183,8 @@ export type PromoCode = {
   discount_egp: number;
   /** Number of book deals the code can be used on, across all users. */
   max_uses: number;
+  /** How many book deals one person can use it on. Null = no per-person limit. */
+  max_uses_per_user: number | null;
   uses_count: number;
   discount_given_egp: number;
   active: boolean;
@@ -195,6 +197,8 @@ export type NotificationKind =
   | 'topup_approved' | 'topup_rejected'
   /** A friend who joined from the user's invite link completed a deal. */
   | 'referral_reward'
+  /** Someone else listed a book. Collapses into one row per user while unread (`count`). */
+  | 'listing_new'
   /** Moderators only. */
   | 'topup_submitted' | 'report_new';
 
@@ -207,7 +211,7 @@ export type AppNotification = {
   listing_id: string | null;
   topup_id?: string | null;
   data: { listing_title?: string; actor_name?: string; amount_egp?: number; preview?: string; note?: string };
-  /** Chat messages collapse into one notification per handover while unread. */
+  /** Chat messages (per handover) and new books collapse into one notification while unread. */
   count: number;
   read_at: string | null;
   created_at: string;

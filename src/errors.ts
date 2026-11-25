@@ -42,6 +42,7 @@ const knownDetails: Record<string, MessageKey> = {
   'This handover is closed': 'chatClosed',
   "This promo code isn't valid": 'errorPromoInvalid',
   'This promo code has been fully used': 'errorPromoExhausted',
+  "You've already used this promo code as many times as it allows": 'errorPromoUsedByYou',
   'Promo codes only apply to sale and exchange fees': 'errorPromoNotApplicable',
   'A promo code with this name already exists': 'errorPromoTaken',
   'Profile photos must be 2 MB or smaller': 'imageTooLarge',

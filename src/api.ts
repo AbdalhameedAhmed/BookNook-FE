@@ -173,8 +173,10 @@ export const api = {
     cancelTransaction: (token: string, id: string) =>
       apiRequest<Transaction>(`/api/v1/admin/transactions/${id}/cancel`, token, { method: 'POST' }),
     promoCodes: async (token: string) => (await apiRequest<{ items: PromoCode[] }>('/api/v1/admin/promo-codes', token)).items,
-    createPromo: (token: string, promo: { code: string; discountEgp: number; maxUses: number }) =>
-      apiRequest<PromoCode>('/api/v1/admin/promo-codes', token, postJson({ code: promo.code, discount_egp: promo.discountEgp, max_uses: promo.maxUses })),
+    createPromo: (token: string, promo: { code: string; discountEgp: number; maxUses: number; maxUsesPerUser: number | null }) =>
+      apiRequest<PromoCode>('/api/v1/admin/promo-codes', token, postJson({
+        code: promo.code, discount_egp: promo.discountEgp, max_uses: promo.maxUses, max_uses_per_user: promo.maxUsesPerUser,
+      })),
     setPromoActive: (token: string, id: string, active: boolean) =>
       apiRequest<PromoCode>(`/api/v1/admin/promo-codes/${id}`, token, { method: 'PATCH', body: JSON.stringify({ active }) }),
   },
