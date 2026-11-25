@@ -1,7 +1,7 @@
 /** Copy added for the Stitch redesign of the auth pages. Keep en and ar keys in sync. */
 export const authMessages = {
   en: {
-    authFormEyebrow: 'Fayoum’s book community',
+    authFormEyebrow: 'Egypt’s book community',
     authModeLabel: 'Sign in or create an account',
     authSafetyTitle: 'Your privacy comes first',
     authAsideEyebrow: 'How Rfoof works',
@@ -20,7 +20,7 @@ export const authMessages = {
     confirmFailedTitle: 'We couldn’t confirm your email',
   },
   ar: {
-    authFormEyebrow: 'مجتمع الكتب في الفيوم',
+    authFormEyebrow: 'مجتمع الكتب في مصر',
     authModeLabel: 'سجّل الدخول أو أنشئ حساباً',
     authSafetyTitle: 'خصوصيتك أولاً',
     authAsideEyebrow: 'كيف تعمل رفوف',

@@ -3,7 +3,7 @@ export const editorMessages = {
   en: {
     editorEyebrowNew: 'New listing',
     editorEyebrowEdit: 'Editing',
-    editorLeadNew: 'Put a book you own on the local shelf for readers in Fayoum.',
+    editorLeadNew: 'Put a book you own on the shelf for readers near you.',
     editorLeadEdit: 'Update the details readers see on the shelf.',
     editorBookLead: 'Details about the copy you have in your hands.',
     editorPassLead: 'Choose how this copy reaches its next reader.',
@@ -20,7 +20,7 @@ export const editorMessages = {
   ar: {
     editorEyebrowNew: 'إعلان جديد',
     editorEyebrowEdit: 'تعديل',
-    editorLeadNew: 'ضع كتاباً تملكه على الرفّ المحلي ليصل إلى قرّاء الفيوم.',
+    editorLeadNew: 'ضع كتاباً تملكه على الرفّ المحلي ليصل إلى قرّاء قريبين منك.',
     editorLeadEdit: 'حدّث التفاصيل التي يراها القرّاء على الرفّ.',
     editorBookLead: 'تفاصيل النسخة التي بين يديك.',
     editorPassLead: 'اختر كيف تصل هذه النسخة إلى قارئها التالي.',

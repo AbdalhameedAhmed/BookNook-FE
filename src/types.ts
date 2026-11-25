@@ -9,6 +9,8 @@ export type Listing = {
   listing_type: ListingType;
   price_egp: number | null;
   status: string;
+  /** One of GOVERNORATES' codes; null only for rows inserted outside the API. */
+  governorate?: string | null;
   area: string;
   meetup_preference: string;
   seller_id: string;
@@ -103,6 +105,7 @@ export type ListingPayload = {
   condition: string;
   listing_type: ListingType;
   price_egp: number | null;
+  governorate: string;
   area: string;
   meetup_preference: string;
   images?: string[];

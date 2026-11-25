@@ -8,7 +8,7 @@ import type { Listing, ListingType } from '../types';
 import { formatCondition, useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { describeError } from '../errors';
-import { priceLabel } from '../lib/listing';
+import { GOVERNORATES, priceLabel, sortedGovernorates } from '../lib/listing';
 import { Alert } from '../components/ui/alert';
 import { Button, buttonClass } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
@@ -18,6 +18,17 @@ import { ui } from '../lib/ui';
 
 const pageSize = 12;
 const conditions = ['like_new', 'good', 'acceptable', 'heavily_used'];
+const GOVERNORATE_KEY = 'rfoof:browse-governorate';
+
+/** The governorate this visitor last browsed, so they land on books they can meet up for. */
+function readSavedGovernorate() {
+  try {
+    const saved = window.localStorage.getItem(GOVERNORATE_KEY) ?? '';
+    return GOVERNORATES.some((item) => item.code === saved) ? saved : '';
+  } catch {
+    return '';
+  }
+}
 const steps: Array<{ title: MessageKey; copy: MessageKey; icon: LucideIcon; tone: string }> = [
   { title: 'stepFind', copy: 'stepFindCopy', icon: SearchCheck, tone: 'bg-glaze text-on-glaze' },
   { title: 'stepReach', copy: 'stepReachCopy', icon: MessageSquareText, tone: 'bg-cobalt text-white dark:text-paper' },
@@ -34,6 +45,11 @@ export default function Storefront() {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [type, setType] = useState<'' | ListingType>('');
   const [condition, setCondition] = useState('');
+  const [governorate, setGovernorateState] = useState(readSavedGovernorate);
+  const setGovernorate = (value: string) => {
+    setGovernorateState(value);
+    try { window.localStorage.setItem(GOVERNORATE_KEY, value); } catch { /* storage blocked: filter just isn't remembered */ }
+  };
   const [page, setPage] = useState(1);
   const [listings, setListings] = useState<Listing[]>([]);
   const [total, setTotal] = useState(0);
@@ -64,7 +80,7 @@ export default function Storefront() {
   useEffect(() => {
     let active = true;
     if (page === 1) setLoading(true); else setLoadingMore(true);
-    api.listings({ q: debouncedQuery, listingType: type, condition, page, pageSize })
+    api.listings({ q: debouncedQuery, listingType: type, condition, governorate, page, pageSize })
       .then((result) => {
         if (!active) return;
         setListings((current) => (page === 1 ? result.items : [...current, ...result.items]));
@@ -78,11 +94,11 @@ export default function Storefront() {
         setLoadingMore(false);
       });
     return () => { active = false; };
-  }, [debouncedQuery, type, condition, page, reloadKey, t]);
+  }, [debouncedQuery, type, condition, governorate, page, reloadKey, t]);
 
-  const isFiltered = Boolean(debouncedQuery || type || condition);
+  const isFiltered = Boolean(debouncedQuery || type || condition || governorate);
   // Any filter change starts again from the first page.
-  const clearFilters = () => { setQuery(''); setType(''); setCondition(''); setPage(1); };
+  const clearFilters = () => { setQuery(''); setType(''); setCondition(''); setGovernorate(''); setPage(1); };
   const types: Array<{ value: '' | ListingType; label: string }> = [
     { value: '', label: t('everything') },
     { value: 'sale', label: t('forSale') },
@@ -160,7 +176,14 @@ export default function Storefront() {
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <label>
+                <span className="sr-only">{t('filterGovernorate')}</span>
+                <select className="h-10 max-w-[12rem] appearance-none rounded-ctl border border-transparent bg-sunk bg-chevron bg-[position:right_12px_center] bg-no-repeat pe-9 ps-3 text-label-md font-medium text-ink focus:border-glaze focus:outline-none rtl:bg-[position:left_12px_center]" value={governorate} onChange={(event) => { setGovernorate(event.target.value); setPage(1); }}>
+                  <option value="">{t('governorateAny')}</option>
+                  {sortedGovernorates(language).map((item) => <option key={item.code} value={item.code}>{item[language]}</option>)}
+                </select>
+              </label>
               <label>
                 <span className="sr-only">{t('filterCondition')}</span>
                 <select className="h-10 appearance-none rounded-ctl border border-transparent bg-sunk bg-chevron bg-[position:right_12px_center] bg-no-repeat pe-9 ps-3 text-label-md font-medium text-ink focus:border-glaze focus:outline-none rtl:bg-[position:left_12px_center]" value={condition} onChange={(event) => { setCondition(event.target.value); setPage(1); }}>

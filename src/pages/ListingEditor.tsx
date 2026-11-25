@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowLeftRight, ArrowRight, BadgeInfo, Banknote, BookOpen, Camera, Check, CheckCircle2, ChevronDown, Eye, Gift, Handshake, ImageUp, ListChecks, MapPin, RefreshCw, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
@@ -7,7 +7,7 @@ import type { Listing, ListingPayload, ListingType } from '../types';
 import { formatCondition, useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { describeError } from '../errors';
-import { fayoumAreas, listingImage, priceLabel } from '../lib/listing';
+import { listingImage, priceLabel, sortedGovernorates } from '../lib/listing';
 import { Alert, FieldError } from '../components/ui/alert';
 import { Button, buttonClass } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
@@ -30,7 +30,7 @@ const types: Array<{ value: ListingType; label: MessageKey; hint: MessageKey }> 
   { value: 'free', label: 'free', hint: 'freeHint' },
 ];
 
-type Field = 'photo' | 'title' | 'price' | 'area';
+type Field = 'photo' | 'title' | 'price' | 'governorate' | 'area';
 
 const sectionCard = cn(ui.card, 'flex flex-col gap-6 p-4 md:p-6');
 const legend = cn(ui.label, 'mb-2');
@@ -108,7 +108,6 @@ function ListingForm({ initial }: { initial: Listing | null }) {
   const { t, language } = useLanguage();
   const toast = useToast();
   const navigate = useNavigate();
-  const areaListId = useId();
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState(initial?.title ?? '');
@@ -117,6 +116,7 @@ function ListingForm({ initial }: { initial: Listing | null }) {
   const [condition, setCondition] = useState(initial?.condition ?? 'good');
   const [listingType, setListingType] = useState<ListingType>(initial?.listing_type ?? 'sale');
   const [price, setPrice] = useState(initial?.price_egp == null ? '' : String(initial.price_egp));
+  const [governorate, setGovernorate] = useState(initial?.governorate ?? '');
   const [area, setArea] = useState(initial?.area ?? '');
   const [meetup, setMeetup] = useState(initial?.meetup_preference ?? 'direct_meetup');
   const [photo, setPhoto] = useState<File | null>(null);
@@ -156,6 +156,7 @@ function ListingForm({ initial }: { initial: Listing | null }) {
       const value = Number(price);
       if (price.trim() === '' || !Number.isInteger(value) || value < 0) next.price = 'fieldPrice';
     }
+    if (!governorate) next.governorate = 'fieldGovernorate';
     if (!area.trim()) next.area = 'fieldRequired';
     else if (area.trim().length < 2) next.area = 'fieldAreaShort';
     return next;
@@ -167,7 +168,7 @@ function ListingForm({ initial }: { initial: Listing | null }) {
     setFormError('');
     const next = validate();
     setErrors(next);
-    const firstInvalid = (['photo', 'title', 'price', 'area'] as Field[]).find((field) => next[field]);
+    const firstInvalid = (['photo', 'title', 'price', 'governorate', 'area'] as Field[]).find((field) => next[field]);
     if (firstInvalid) {
       const target = document.getElementById(`listing-${firstInvalid}`);
       target?.focus({ preventScroll: true });
@@ -193,6 +194,7 @@ function ListingForm({ initial }: { initial: Listing | null }) {
         condition,
         listing_type: listingType,
         price_egp: listingType === 'sale' ? Number(price) : null,
+        governorate,
         area: area.trim(),
         meetup_preference: meetup,
         images,
@@ -215,7 +217,7 @@ function ListingForm({ initial }: { initial: Listing | null }) {
 
   const previewCard = (
     <BookCard
-      listing={{ id: initial?.id ?? 'preview', title: title || t('bookTitle'), author: author || null, images: [], listing_type: listingType, area: area || '…' }}
+      listing={{ id: initial?.id ?? 'preview', title: title || t('bookTitle'), author: author || null, images: [], listing_type: listingType, governorate: governorate || null, area: area || '…' }}
       photo={photoPreview}
       price={listingType === 'sale' && price === '' ? `… ${t('currencyCode')}` : priceLabel({ listing_type: listingType, price_egp: price === '' ? null : Number(price) }, t)}
       conditionLabel={formatCondition(condition, t)}
@@ -338,15 +340,25 @@ function ListingForm({ initial }: { initial: Listing | null }) {
             </div>
           ) : null}
 
-          <div className={ui.field} data-tour="listing-area">
-            <label className={ui.label} htmlFor="listing-area">{t('approximateArea')}{required}</label>
-            <div className="relative">
-              <input id="listing-area" className={cn(ui.control, 'pe-11')} list={areaListId} value={area} onChange={(event) => { setArea(event.target.value); setFieldError('area'); }} maxLength={100} autoComplete="off" aria-required="true" {...invalid('area')} aria-describedby={errors.area ? 'listing-area-error listing-area-hint' : 'listing-area-hint'} />
-              <MapPin className="pointer-events-none absolute end-3.5 top-1/2 -translate-y-1/2 text-ink-3" size={18} aria-hidden="true" />
+          <div className="grid gap-4 sm:grid-cols-2" data-tour="listing-area">
+            <div className={ui.field}>
+              <label className={ui.label} htmlFor="listing-governorate">{t('governorate')}{required}</label>
+              <select id="listing-governorate" className={cn(ui.control, 'appearance-none bg-chevron bg-[position:right_12px_center] bg-no-repeat pe-9 rtl:bg-[position:left_12px_center]')} value={governorate} onChange={(event) => { setGovernorate(event.target.value); setFieldError('governorate'); }} aria-required="true" {...invalid('governorate')} aria-describedby={errors.governorate ? 'listing-governorate-error listing-governorate-hint' : 'listing-governorate-hint'}>
+                <option value="" disabled>{t('governorateChoose')}</option>
+                {sortedGovernorates(language).map((item) => <option key={item.code} value={item.code}>{item[language]}</option>)}
+              </select>
+              <span id="listing-governorate-hint" className={ui.hint}>{t('governorateHint')}</span>
+              <FieldError id="listing-governorate-error">{errors.governorate ? t(errors.governorate) : null}</FieldError>
             </div>
-            <datalist id={areaListId}>{fayoumAreas[language].map((name) => <option key={name} value={name} />)}</datalist>
-            <span id="listing-area-hint" className={cn(ui.hint, 'flex items-start gap-1.5')}><ShieldAlert size={15} className="mt-px flex-none text-ochre" aria-hidden="true" />{t('areaHint')}</span>
-            <FieldError id="listing-area-error">{errors.area ? t(errors.area) : null}</FieldError>
+            <div className={ui.field}>
+              <label className={ui.label} htmlFor="listing-area">{t('cityArea')}{required}</label>
+              <div className="relative">
+                <input id="listing-area" className={cn(ui.control, 'pe-11')} value={area} onChange={(event) => { setArea(event.target.value); setFieldError('area'); }} maxLength={100} autoComplete="off" aria-required="true" {...invalid('area')} aria-describedby={errors.area ? 'listing-area-error listing-area-hint' : 'listing-area-hint'} />
+                <MapPin className="pointer-events-none absolute end-3.5 top-1/2 -translate-y-1/2 text-ink-3" size={18} aria-hidden="true" />
+              </div>
+              <span id="listing-area-hint" className={cn(ui.hint, 'flex items-start gap-1.5')}><ShieldAlert size={15} className="mt-px flex-none text-ochre" aria-hidden="true" />{t('cityAreaHint')}</span>
+              <FieldError id="listing-area-error">{errors.area ? t(errors.area) : null}</FieldError>
+            </div>
           </div>
 
           <fieldset className={ui.field}>

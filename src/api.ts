@@ -77,7 +77,7 @@ export const api = {
     invite: (token: string) => apiRequest<InviteSummary>('/api/v1/me/invite', token),
   },
   listings: (filters: {
-    q?: string; listingType?: string; condition?: string; page?: number; pageSize?: number;
+    q?: string; listingType?: string; condition?: string; governorate?: string; page?: number; pageSize?: number;
     sellerId?: string; sort?: 'newest' | 'price_asc';
   } = {}) => {
     const params = new URLSearchParams();
@@ -86,6 +86,7 @@ export const api = {
     if (filters.q) params.set('q', filters.q);
     if (filters.listingType) params.set('listing_type', filters.listingType);
     if (filters.condition) params.set('condition', filters.condition);
+    if (filters.governorate) params.set('governorate', filters.governorate);
     if (filters.page) params.set('page', String(filters.page));
     if (filters.pageSize) params.set('page_size', String(filters.pageSize));
     const search = params.toString();

@@ -8,7 +8,7 @@ import type { Listing, PromoPreview } from '../types';
 import { formatCondition, formatMeetup, useLanguage } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { describeError, isNotFound } from '../errors';
-import { listingImage, priceLabel, timeAgo } from '../lib/listing';
+import { listingImage, placeLabel, priceLabel, timeAgo } from '../lib/listing';
 import { Alert } from '../components/ui/alert';
 import { Button, buttonClass } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
@@ -270,7 +270,7 @@ export default function BookDetail() {
             </Fact>
             <Fact label={t('area')}>
               <MapPin size={16} className="shrink-0 text-glaze" aria-hidden="true" />
-              {listing.area}
+              {placeLabel(listing, language)}
             </Fact>
             <Fact label={t('detailListed')}>{listedAgo}</Fact>
           </dl>

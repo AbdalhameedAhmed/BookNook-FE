@@ -71,8 +71,49 @@ export function timeAgo(iso: string, language: string) {
   return format.format(0, 'minute');
 }
 
-/** Fayoum's districts, offered as suggestions for the approximate area field. */
-export const fayoumAreas: Record<'en' | 'ar', string[]> = {
-  en: ['Fayoum City', 'Ibshaway', 'Itsa', 'Sinnuris', 'Tamiya', 'Yusuf El Seddik'],
-  ar: ['مدينة الفيوم', 'إبشواي', 'إطسا', 'سنورس', 'طامية', 'يوسف الصديق'],
-};
+/** Egypt's 27 governorates. Codes match the backend's VALID_GOVERNORATES and the DB check (migration 020). */
+export const GOVERNORATES = [
+  { code: 'cairo', en: 'Cairo', ar: 'القاهرة' },
+  { code: 'giza', en: 'Giza', ar: 'الجيزة' },
+  { code: 'alexandria', en: 'Alexandria', ar: 'الإسكندرية' },
+  { code: 'qalyubia', en: 'Qalyubia', ar: 'القليوبية' },
+  { code: 'sharqia', en: 'Sharqia', ar: 'الشرقية' },
+  { code: 'dakahlia', en: 'Dakahlia', ar: 'الدقهلية' },
+  { code: 'gharbia', en: 'Gharbia', ar: 'الغربية' },
+  { code: 'monufia', en: 'Monufia', ar: 'المنوفية' },
+  { code: 'kafr_el_sheikh', en: 'Kafr El Sheikh', ar: 'كفر الشيخ' },
+  { code: 'beheira', en: 'Beheira', ar: 'البحيرة' },
+  { code: 'damietta', en: 'Damietta', ar: 'دمياط' },
+  { code: 'port_said', en: 'Port Said', ar: 'بورسعيد' },
+  { code: 'ismailia', en: 'Ismailia', ar: 'الإسماعيلية' },
+  { code: 'suez', en: 'Suez', ar: 'السويس' },
+  { code: 'north_sinai', en: 'North Sinai', ar: 'شمال سيناء' },
+  { code: 'south_sinai', en: 'South Sinai', ar: 'جنوب سيناء' },
+  { code: 'red_sea', en: 'Red Sea', ar: 'البحر الأحمر' },
+  { code: 'fayoum', en: 'Fayoum', ar: 'الفيوم' },
+  { code: 'beni_suef', en: 'Beni Suef', ar: 'بني سويف' },
+  { code: 'minya', en: 'Minya', ar: 'المنيا' },
+  { code: 'asyut', en: 'Asyut', ar: 'أسيوط' },
+  { code: 'sohag', en: 'Sohag', ar: 'سوهاج' },
+  { code: 'qena', en: 'Qena', ar: 'قنا' },
+  { code: 'luxor', en: 'Luxor', ar: 'الأقصر' },
+  { code: 'aswan', en: 'Aswan', ar: 'أسوان' },
+  { code: 'new_valley', en: 'New Valley', ar: 'الوادي الجديد' },
+  { code: 'matrouh', en: 'Matrouh', ar: 'مطروح' },
+] as const;
+
+/** Governorates sorted by name in the current language, for selects. */
+export function sortedGovernorates(language: 'en' | 'ar') {
+  return [...GOVERNORATES].sort((a, b) => a[language].localeCompare(b[language], language));
+}
+
+export function governorateName(code: string | null | undefined, language: 'en' | 'ar') {
+  return GOVERNORATES.find((item) => item.code === code)?.[language] ?? '';
+}
+
+/** "Smouha, Alexandria": the free-text area plus its governorate when known. */
+export function placeLabel(listing: { area: string; governorate?: string | null }, language: 'en' | 'ar') {
+  const governorate = governorateName(listing.governorate, language);
+  if (!governorate || listing.area.trim() === governorate) return listing.area;
+  return `${listing.area}${language === 'ar' ? '، ' : ', '}${governorate}`;
+}

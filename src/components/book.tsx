@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, MapPin, Plus } from 'lucide-react';
 import type { Listing, ListingType } from '../types';
 import { formatStatus, useLanguage } from '../i18n';
-import { bookLook, listingImage, listingTypeLabel, priceLabel } from '../lib/listing';
+import { bookLook, listingImage, listingTypeLabel, placeLabel, priceLabel } from '../lib/listing';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
@@ -122,7 +122,7 @@ export function StatusPill({ status }: { status: string }) {
  * Used by the storefront grid and the listing editor's preview.
  */
 export function BookCard({ listing, price, conditionLabel, authorFallback, sellerLabel, to, photo }: {
-  listing: CoverListing & Pick<Listing, 'listing_type' | 'area'> & { seller_name?: string | null };
+  listing: CoverListing & Pick<Listing, 'listing_type' | 'area' | 'governorate'> & { seller_name?: string | null };
   price: string;
   conditionLabel: string;
   authorFallback: string;
@@ -132,6 +132,7 @@ export function BookCard({ listing, price, conditionLabel, authorFallback, selle
   to?: string;
   photo?: string | null;
 }) {
+  const { language } = useLanguage();
   const body = (
     <>
       <span className="relative block aspect-[3/4] w-full overflow-hidden bg-sunk">
@@ -148,7 +149,7 @@ export function BookCard({ listing, price, conditionLabel, authorFallback, selle
           <span dir="auto" className="mt-0.5 block truncate ltr:text-left rtl:text-right text-body-sm font-medium text-ink-2">{listing.author || authorFallback}</span>
           <span className="mt-1 flex min-w-0 items-center gap-1 text-ink-2">
             <MapPin className="shrink-0 text-glaze-deep" size={15} aria-hidden="true" />
-            <span dir="auto" className="min-w-0 truncate text-label-sm">{listing.area}</span>
+            <span dir="auto" className="min-w-0 truncate text-label-sm">{placeLabel(listing, language)}</span>
           </span>
         </span>
         {sellerLabel && listing.seller_name ? (
