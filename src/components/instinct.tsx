@@ -26,7 +26,7 @@ export function InstinctButton({ defaultGovernorate = '', className }: { default
   const [app, setApp] = useState<ChatApp>('whatsapp');
   const [error, setError] = useState(false);
 
-  const siteUrl = `${window.location.origin}/`;
+  const siteUrl = window.location.origin;
   const message = useMemo(() => buildInstinctMessage({
     interests: interests || '…',
     siteUrl,

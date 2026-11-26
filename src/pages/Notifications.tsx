@@ -179,7 +179,7 @@ export function NotificationRow({ item, onOpen, compact = false }: { item: AppNo
   const values = {
     actor: data.actor_name || t('notifSomeone'),
     title: data.listing_title || t('notifABook'),
-    amount,
+    amount, 
     count: item.count,
   };
   const key: MessageKey = item.kind === 'message' && item.count > 1 ? 'notifMessages'

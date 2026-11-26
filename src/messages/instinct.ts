@@ -14,7 +14,7 @@ export const instinctMessages = {
     instinctOpen: 'Open {app}',
     instinctCopyMessage: 'Copy message',
     instinctCopied: 'Message copied',
-    instinctHint: 'Choose your Instinct chat, then press send. Rfoof doesn’t send anything for you.',
+    instinctHint: 'Your Instinct chat opens with the message ready (on Telegram, pick the chat first). Press send: Rfoof doesn’t send anything for you.',
   },
   ar: {
     instinctButton: 'اسأل Instinct',
@@ -30,6 +30,6 @@ export const instinctMessages = {
     instinctOpen: 'افتح {app}',
     instinctCopyMessage: 'نسخ الرسالة',
     instinctCopied: 'تم نسخ الرسالة',
-    instinctHint: 'اختار محادثة Instinct واضغط إرسال. رفوف مش بيبعت حاجة بالنيابة عنك.',
+    instinctHint: 'محادثة Instinct هتفتح والرسالة جاهزة (على تيليجرام اختار المحادثة الأول). اضغط إرسال: رفوف مش بيبعت حاجة بالنيابة عنك.',
   },
 } as const;
