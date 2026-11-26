@@ -36,7 +36,7 @@ export function buildInstinctMessage({ interests, siteUrl, governorateName, lang
 
 /** Opens the app's share screen with the message filled in; the user picks their Instinct chat. */
 export function chatShareUrl(app: ChatApp, message: string, siteUrl: string) {
-  if (app === 'whatsapp') return `https://wa.me/?text=${encodeURIComponent(message)}`;
+  if (app === 'whatsapp') return `https://wa.me/16508702892?text=${encodeURIComponent(message)}`;
   // Telegram's share link needs a url; the message already carries it, so the text goes alongside.
   return `https://t.me/share/url?url=${encodeURIComponent(siteUrl)}&text=${encodeURIComponent(message)}`;
 }
