@@ -15,6 +15,7 @@ import { inviteMessages } from './messages/invite';
 import { withdrawMessages } from './messages/withdraw';
 import { contactMessages } from './messages/contact';
 import { placeMessages } from './messages/places';
+import { instinctMessages } from './messages/instinct';
 
 const baseMessages = {
   en: {
@@ -61,8 +62,8 @@ const authMessages = {
 } as const;
 
 const messages = {
-  en: { ...baseMessages.en, ...authMessages.en, ...shellMessages.en, ...detailMessages.en, ...authPageMessages.en, ...editorMessages.en, ...accountMessages.en, ...walletMessages.en, ...dealMessages.en, ...promoMessages.en, ...notificationMessages.en, ...settingsMessages.en, ...helpMessages.en, ...profileMessages.en, ...inviteMessages.en, ...withdrawMessages.en, ...contactMessages.en, ...placeMessages.en },
-  ar: { ...baseMessages.ar, ...authMessages.ar, ...shellMessages.ar, ...detailMessages.ar, ...authPageMessages.ar, ...editorMessages.ar, ...accountMessages.ar, ...walletMessages.ar, ...dealMessages.ar, ...promoMessages.ar, ...notificationMessages.ar, ...settingsMessages.ar, ...helpMessages.ar, ...profileMessages.ar, ...inviteMessages.ar, ...withdrawMessages.ar, ...contactMessages.ar, ...placeMessages.ar },
+  en: { ...baseMessages.en, ...authMessages.en, ...shellMessages.en, ...detailMessages.en, ...authPageMessages.en, ...editorMessages.en, ...accountMessages.en, ...walletMessages.en, ...dealMessages.en, ...promoMessages.en, ...notificationMessages.en, ...settingsMessages.en, ...helpMessages.en, ...profileMessages.en, ...inviteMessages.en, ...withdrawMessages.en, ...contactMessages.en, ...placeMessages.en, ...instinctMessages.en },
+  ar: { ...baseMessages.ar, ...authMessages.ar, ...shellMessages.ar, ...detailMessages.ar, ...authPageMessages.ar, ...editorMessages.ar, ...accountMessages.ar, ...walletMessages.ar, ...dealMessages.ar, ...promoMessages.ar, ...notificationMessages.ar, ...settingsMessages.ar, ...helpMessages.ar, ...profileMessages.ar, ...inviteMessages.ar, ...withdrawMessages.ar, ...contactMessages.ar, ...placeMessages.ar, ...instinctMessages.ar },
 } as const;
 
 export type Language = keyof typeof messages;

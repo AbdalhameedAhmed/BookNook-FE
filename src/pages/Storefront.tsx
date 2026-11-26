@@ -13,6 +13,7 @@ import { Alert } from '../components/ui/alert';
 import { Button, buttonClass } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
 import { BookCard, BookCardSkeleton, Shelf } from '../components/book';
+import { InstinctButton } from '../components/instinct';
 import { cn } from '../lib/utils';
 import { ui } from '../lib/ui';
 
@@ -154,10 +155,13 @@ export default function Storefront() {
 
       <div className={cn(ui.wrap, 'relative z-10 -mt-6')}>
         <div className="flex flex-col gap-4 rounded-2xl bg-surface p-4 shadow-deck">
-          <form className="relative" role="search" data-tour="search" onSubmit={(event) => { event.preventDefault(); booksRef.current?.scrollIntoView({ block: 'start' }); }}>
+          <div className="flex flex-col gap-2 sm:flex-row">
+          <form className="relative flex-1" role="search" data-tour="search" onSubmit={(event) => { event.preventDefault(); booksRef.current?.scrollIntoView({ block: 'start' }); }}>
             <Search className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-ink-3" size={20} aria-hidden="true" />
             <input className="h-12 w-full rounded-xl border border-transparent bg-sunk pe-4 ps-11 text-body-md text-ink placeholder:text-ink-3 focus:border-glaze focus:bg-surface focus:shadow-[0_0_0_3px_rgb(var(--glaze-soft))] focus:outline-none" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('searchBooks')} aria-label={t('searchBooks')} enterKeyHint="search" />
           </form>
+          <InstinctButton defaultGovernorate={governorate} className="flex-none" />
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex max-w-full gap-1.5 overflow-x-auto [scrollbar-width:none]" role="group" aria-label={t('filterBooks')} data-tour="filters">
               {types.map((item) => (
