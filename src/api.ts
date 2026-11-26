@@ -7,12 +7,6 @@ import { ApiError, NetworkError, readDetail } from './errors';
 let unauthorizedHandler: (() => void) | null = null;
 
 /** Called when an authenticated request is rejected with 401 (expired or revoked session). */
-/** Public plain-text list of available books with links, for AI assistants such as Instinct. */
-export function catalogMarkdownUrl(governorate?: string) {
-  const base = String(import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
-  return `${base}/api/v1/catalog.md${governorate ? `?governorate=${encodeURIComponent(governorate)}` : ''}`;
-}
-
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   unauthorizedHandler = handler;
 }

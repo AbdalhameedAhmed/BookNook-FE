@@ -3,7 +3,7 @@ export const instinctMessages = {
   en: {
     instinctButton: 'Ask Instinct',
     instinctTitle: 'Get book picks from Instinct',
-    instinctCopy: 'Tell us what you like. We’ll write the message for you, with the list of books on Rfoof, and open your Instinct chat.',
+    instinctCopy: 'Tell us what you like. We’ll write the message for you, with the Rfoof link, and open your Instinct chat.',
     instinctInterests: 'What do you want to read?',
     instinctInterestsPlaceholder: 'e.g. Egyptian novels, self-help, books for first-year engineering',
     instinctInterestsRequired: 'Write a few words about what you want to read.',
@@ -19,7 +19,7 @@ export const instinctMessages = {
   ar: {
     instinctButton: 'اسأل Instinct',
     instinctTitle: 'خُد ترشيحات كتب من Instinct',
-    instinctCopy: 'قولنا بتحب تقرأ إيه. هنكتبلك الرسالة مع قائمة الكتب اللي على رفوف، ونفتحلك محادثة Instinct.',
+    instinctCopy: 'قولنا بتحب تقرأ إيه. هنكتبلك الرسالة مع لينك رفوف، ونفتحلك محادثة Instinct.',
     instinctInterests: 'عايز تقرأ إيه؟',
     instinctInterestsPlaceholder: 'مثلاً روايات مصرية، تنمية بشرية، كتب أولى هندسة',
     instinctInterestsRequired: 'اكتب كلمتين عن اللي عايز تقرأه.',

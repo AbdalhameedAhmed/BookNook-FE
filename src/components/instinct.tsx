@@ -1,6 +1,5 @@
 import { useId, useMemo, useState } from 'react';
 import { Copy, MessageCircle, Send, Sparkles } from 'lucide-react';
-import { catalogMarkdownUrl } from '../api';
 import { useLanguage } from '../i18n';
 import { governorateName, sortedGovernorates } from '../lib/listing';
 import { MAX_INTERESTS, buildInstinctMessage, chatShareUrl } from '../lib/instinct';
@@ -27,20 +26,19 @@ export function InstinctButton({ defaultGovernorate = '', className }: { default
   const [app, setApp] = useState<ChatApp>('whatsapp');
   const [error, setError] = useState(false);
 
-  const catalogUrl = new URL(catalogMarkdownUrl(governorate || undefined), window.location.origin).href;
+  const siteUrl = `${window.location.origin}/`;
   const message = useMemo(() => buildInstinctMessage({
     interests: interests || '…',
-    catalogUrl,
-    siteUrl: window.location.origin,
+    siteUrl,
     governorateName: governorateName(governorate, language) || undefined,
     language,
-  }), [interests, catalogUrl, governorate, language]);
+  }), [interests, siteUrl, governorate, language]);
 
   const openDialog = () => { setGovernorate(defaultGovernorate); setError(false); setOpen(true); };
 
   const openChat = () => {
     if (!interests.trim()) { setError(true); document.getElementById(`${id}-interests`)?.focus(); return; }
-    window.open(chatShareUrl(app, message, catalogUrl), '_blank', 'noopener,noreferrer');
+    window.open(chatShareUrl(app, message, siteUrl), '_blank', 'noopener,noreferrer');
     setOpen(false);
   };
 
